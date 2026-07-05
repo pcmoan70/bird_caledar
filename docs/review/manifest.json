@@ -16839,10 +16839,11 @@
    "name": "Snowy Owl",
    "sci": "Bubo scandiacus",
    "family": "Typical Owls",
-   "reason": "pick-keep-regen2",
+   "reason": "recover-stuck",
    "before": "review_imgs/snoowl1/before.png",
-   "ref": "https://cdn.download.ams.birds.cornell.edu/api/v2/asset/106358811/320",
-   "ref_source": "whobird",
+   "ref": "review_imgs/snoowl1/ref.jpg",
+   "photo": "review_imgs/snoowl1/photo.jpg",
+   "ref_source": "pinned",
    "recipe": "v4-macaulay-id",
    "id": "Large white owl with rounded head and no ear tufts; bright yellow eyes. Female and immature variably barred dark grey-brown; male nearly pure white. Heavily feathered feet, small black bill.",
    "chosen": null,
@@ -16850,25 +16851,34 @@
     {
      "id": "v0",
      "img": "review_imgs/snoowl1/v0.png",
-     "seed": 3006,
-     "strength": 0.7,
-     "sim": 0.813,
-     "pose": 0.483,
-     "bird": 0.954
+     "seed": 1026,
+     "strength": 0.68,
+     "sim": 0.906,
+     "pose": 0.628,
+     "bird": 0.866
     },
     {
      "id": "v1",
      "img": "review_imgs/snoowl1/v1.png",
-     "seed": 3005,
-     "strength": 0.62,
-     "sim": 0.773,
-     "pose": 0.195,
-     "bird": 0.828
+     "seed": 1025,
+     "strength": 0.6,
+     "sim": 0.818,
+     "pose": 0.637,
+     "bird": 0.854
+    },
+    {
+     "id": "v2",
+     "img": "review_imgs/snoowl1/v2.png",
+     "seed": 1027,
+     "strength": 0.74,
+     "sim": 0.894,
+     "pose": 0.516,
+     "bird": 0.706
     }
    ],
+   "gen": 1782900990,
    "reviewed": false,
-   "pending": true,
-   "photo": "review_imgs/snoowl1/photo.jpg"
+   "pending": false
   },
   "soclap1": {
    "name": "Sociable Lapwing",
@@ -17576,10 +17586,11 @@
    "name": "Moltoni's Warbler",
    "sci": "Curruca subalpina",
    "family": "Sylviid Warblers and Allies",
-   "reason": "pick-keep-regen2",
+   "reason": "recover-stuck",
    "before": "review_imgs/subwar8/before.png",
    "ref": "review_imgs/subwar8/ref.jpg",
-   "ref_source": "gbif",
+   "photo": "review_imgs/subwar8/photo.jpg",
+   "ref_source": "pinned",
    "recipe": "v4-macaulay-id",
    "id": "Small slim warbler; male has slate-grey head and upperparts, brick-orange throat and breast fading to whitish belly, narrow white submoustachial stripe, red eye-ring, and pinkish legs.",
    "chosen": null,
@@ -17587,26 +17598,34 @@
     {
      "id": "v0",
      "img": "review_imgs/subwar8/v0.png",
-     "seed": 3016,
-     "strength": 0.7,
-     "sim": 0.726,
-     "pose": 0.737,
-     "bird": 0.771
+     "seed": 1032,
+     "strength": 0.74,
+     "sim": 0.757,
+     "pose": 0.132,
+     "bird": 0.843
     },
     {
      "id": "v1",
      "img": "review_imgs/subwar8/v1.png",
-     "seed": 3015,
-     "strength": 0.62,
-     "sim": 0.721,
-     "pose": 0.4,
-     "bird": 0.957
+     "seed": 1030,
+     "strength": 0.6,
+     "sim": 0.801,
+     "pose": 0.077,
+     "bird": 0.716
+    },
+    {
+     "id": "v2",
+     "img": "review_imgs/subwar8/v2.png",
+     "seed": 1031,
+     "strength": 0.68,
+     "sim": 0.837,
+     "pose": 0.049,
+     "bird": 0.502
     }
    ],
-   "gen": 1782733599,
+   "gen": 1782901139,
    "reviewed": false,
-   "pending": true,
-   "photo": "review_imgs/subwar8/photo.jpg"
+   "pending": false
   },
   "sursco": {
    "name": "Surf Scoter",
@@ -20286,17 +20305,5 @@
    "pending": false
   }
  },
- "queued": [
-  "mstlar1",
-  "norpin",
-  "norshr1",
-  "razorb",
-  "redpha1",
-  "rekcoo1",
-  "rengre",
-  "rinduc",
-  "shteag1",
-  "snoowl1",
-  "subwar8"
- ]
+ "queued": []
 }

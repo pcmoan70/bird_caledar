@@ -123,6 +123,7 @@ def main():
     sess = new_session("birefnet-general")
 
     done = 0
+    pushed = 0
     idle = False
     while True:
         ids = R.load_id_features()   # pick up prompt edits between jobs
@@ -131,6 +132,10 @@ def main():
             if args.drain:
                 print("queue empty; draining done."); break
             if not idle:
+                # Flush any trailing work (< PUSH_EVERY since the last push) so
+                # nothing sits uncommitted while the worker idles.
+                if done > pushed:
+                    R.push_batch(done, final=True); pushed = done
                 print("queue empty; waiting for feedback..."); idle = True
             time.sleep(POLL); continue
         idle = False
@@ -142,7 +147,7 @@ def main():
         if ok:
             done += 1
             if done % R.PUSH_EVERY == 0:
-                R.push_batch(done)
+                R.push_batch(done); pushed = done
     if done:
         R.push_batch(done, final=True)
     print(f"\nworker stopped; {done} jobs generated")

@@ -316,7 +316,7 @@
     el.className = "bird" + (DOWNVOTED.has(it.img) ? " downvoted" : "") +
       (it.ai ? " ai" : "");
     el.style.left = it.x + "px"; el.style.top = it.y + "px";
-    el.style.width = it.size + "px";
+    el.style.width = it.size + "px"; el.style.height = it.size + "px";
     var im = document.createElement("img");
     im.loading = "lazy"; im.decoding = "async";
     im.src = it.src; im.alt = nameFor(it.code).common;

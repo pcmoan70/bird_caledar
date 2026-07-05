@@ -13,7 +13,8 @@
  */
 window.BirdLayout = (function () {
   var TOP = 72;            // clear the fixed header
-  var GAP = 8;             // min horizontal gap between birds
+  var GAP = 8;             // min gap between birds (horizontal and between rows)
+  var JIT = 9;             // max vertical jitter (±); rows advance enough to absorb it
 
   // How aggressively size tracks probability. Size = maxPx * (value/maxV)^POW;
   // POW > 1 makes probable birds clearly bigger and improbable ones much
@@ -77,15 +78,18 @@ window.BirdLayout = (function () {
         var j = Math.floor(rand() * (k + 1)); var tmp = order[k]; order[k] = order[j]; order[j] = tmp;
       }
 
-      var x = extra * weights[0] / wtot;
+      var x = extra * weights[0] / wtot;   // left margin
       order.forEach(function (r, idx) {
         var cx = x + r.s / 2;
-        var jit = (rand() - 0.5) * Math.min(0.7 * (rowH - r.s) + 22, 32);
+        var jit = (rand() - 0.5) * 2 * JIT;   // bounded ±JIT so rows can't collide
         var cy = y + rowH / 2 + jit;
         placed.push(Object.assign({}, r.it, { x: cx, y: cy, size: r.s }));
-        x += r.s + extra * weights[idx + 1] / wtot;
+        // advance: bird width + a real GAP between birds + a share of the slack
+        x += r.s + (idx < order.length - 1 ? GAP : 0) + extra * weights[idx + 1] / wtot;
       });
-      y += rowH + GAP;
+      // Advance far enough that this row's downward jitter and the next row's
+      // upward jitter can never make their (square) boxes overlap.
+      y += rowH + GAP + 2 * JIT;
     }
 
     return { placed: placed, height: y + GAP };

@@ -25,12 +25,12 @@
 
   // Localised page title (falls back to English for any other locale).
   var TITLES = {
-    en: "Birds Today", sv: "Fåglar idag", de: "Vögel heute",
-    fr: "Oiseaux aujourd'hui", es: "Aves hoy", nl: "Vogels vandaag",
-    fi: "Linnut tänään", no: "Fugler i dag", da: "Fugle i dag",
-    it: "Uccelli oggi", pt: "Aves hoje", pl: "Ptaki dzisiaj",
-    ru: "Птицы сегодня", ja: "今日の鳥", "zh-CN": "今日鸟类",
-    cs: "Ptáci dnes", uk: "Птахи сьогодні", tr: "Bugün kuşlar",
+    en: "Birds here today", sv: "Fåglar här idag", de: "Vögel heute hier",
+    fr: "Oiseaux ici aujourd'hui", es: "Aves aquí hoy", nl: "Vogels hier vandaag",
+    fi: "Linnut täällä tänään", no: "Fugler her i dag", da: "Fugle her i dag",
+    it: "Uccelli qui oggi", pt: "Aves aqui hoje", pl: "Ptaki tutaj dzisiaj",
+    ru: "Птицы здесь сегодня", ja: "今日ここの鳥", "zh-CN": "此地今日鸟类",
+    cs: "Ptáci tady dnes", uk: "Птахи тут сьогодні", tr: "Bugün buradaki kuşlar",
   };
 
   // Per-language name casing: eBird already follows each language's convention

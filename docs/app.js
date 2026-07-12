@@ -415,10 +415,16 @@
 
   // ---- Controls -------------------------------------------------------------
   function setupControls() {
-    document.querySelectorAll("#mode button").forEach(function (b) {
+    // The View toggle shows only the active setting (CSS hides the inactive
+    // button); tapping it switches to the next option (Residents <-> Migration).
+    var modeBtns = Array.prototype.slice.call(document.querySelectorAll("#mode button"));
+    modeBtns.forEach(function (b) {
       b.onclick = async function () {
-        document.querySelectorAll("#mode button").forEach(function (x) { x.classList.remove("on"); });
-        b.classList.add("on"); S.mode = b.getAttribute("data-mode");
+        var cur = 0;
+        modeBtns.forEach(function (x, i) { if (x.classList.contains("on")) cur = i; });
+        var nb = modeBtns[(cur + 1) % modeBtns.length];
+        modeBtns.forEach(function (x) { x.classList.remove("on"); });
+        nb.classList.add("on"); S.mode = nb.getAttribute("data-mode");
         setStatus("…");
         await ensureProbs();   // Migration needs neighbouring weeks; compute if missing
         render();

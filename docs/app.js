@@ -548,6 +548,15 @@
     ml.target = "_blank"; ml.rel = "noopener";
     ml.textContent = "Photos & sounds on Macaulay Library →";
     extra.appendChild(ml);
+    // Link to this species' call recordings on xeno-canto.
+    if (nm.sci) {
+      extra.appendChild(document.createElement("br"));
+      var xc = document.createElement("a");
+      xc.href = "https://xeno-canto.org/species/" + nm.sci.trim().replace(/\s+/g, "-");
+      xc.target = "_blank"; xc.rel = "noopener";
+      xc.textContent = "Listen to its calls on xeno-canto →";
+      extra.appendChild(xc);
+    }
     // For AI drawings, deep-link to this species' card on the review page.
     if (v.ai) {
       extra.appendChild(document.createElement("br"));

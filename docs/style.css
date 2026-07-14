@@ -160,6 +160,34 @@ select { border: 1px solid #cfc8b6; border-radius: 8px; padding: 5px 8px; color:
 .fb button.down.act { background: #e8b4ad; }
 .fb button.rev { font-size: 12px; }
 .fb button.rev:hover { background: #cfe0d3; }
+.fb button.song { font-size: 12px; }
+.fb button.song:hover { background: #cfe0d3; }
+.fb button.song.playing { background: #9ccf8f; }
+
+/* Detail-modal "Listen" button + recording credit */
+.listen {
+  margin: 8px 0 4px; font: inherit; font-size: 14px; cursor: pointer;
+  color: var(--ink); background: #eef3ea; border: 1px solid #cfe0d3;
+  border-radius: 999px; padding: 7px 16px;
+}
+.listen:hover { background: #dfeada; }
+.listen.playing { background: #bfe3b0; border-color: #9ccf8f; }
+.bird-extra a.credit { color: var(--muted); font-size: 12px; }
+
+/* Floating "now playing" chip with a stop control */
+#nowplaying {
+  position: fixed; left: 50%; bottom: 34px; transform: translateX(-50%); z-index: 24;
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(43,42,38,0.94); color: #f3efe6;
+  padding: 6px 8px 6px 14px; border-radius: 999px; font-size: 13px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35); max-width: 80vw;
+}
+#nowplaying[hidden] { display: none; }
+#nowplaying .npx {
+  border: 0; background: rgba(255,255,255,0.18); color: #f3efe6; cursor: pointer;
+  width: 22px; height: 22px; border-radius: 999px; font-size: 12px; line-height: 1; padding: 0;
+}
+#nowplaying .npx:hover { background: rgba(255,255,255,0.32); }
 
 #status {
   position: fixed; bottom: 10px; left: 0; right: 0; z-index: 20;

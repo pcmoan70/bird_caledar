@@ -49,7 +49,6 @@
     labels: [], codeToIdx: {}, nSpecies: 0,
     tax: {}, langs: [], lang: "en",
     manifest: {}, plates: {}, probs: {},   // probs: {weekIndex: Float32Array(nSpecies)}
-    songs: {},                             // {code: {url, page, artist, license}}
     lat: DEFAULT.lat, lon: DEFAULT.lon, week: 1, mode: "A", src: "gould",
     aiBW: false,
   };
@@ -312,42 +311,6 @@
   // Incremental builder: birds are mounted only once the scroll reaches them.
   var SCROLL = { items: [], idx: 0, halfW: 0 };
 
-  // ---- Birdsong -------------------------------------------------------------
-  // One shared <audio>; clicking a 🔊 plays that species' call (baked into
-  // songs.json from Wikimedia Commons). A floating chip shows what's playing.
-  var AUDIO = new Audio();
-  AUDIO.preload = "none";
-  function updateNowPlaying() {
-    var np = document.getElementById("nowplaying");
-    if (!np) return;
-    if (AUDIO._code && !AUDIO.paused) {
-      np.hidden = false;
-      np.innerHTML = "";
-      np.appendChild(document.createTextNode("🔊 " + nameFor(AUDIO._code).common + " "));
-      var x = document.createElement("button");
-      x.className = "npx"; x.textContent = "✕"; x.setAttribute("aria-label", "Stop");
-      x.onclick = stopSong; np.appendChild(x);
-    } else { np.hidden = true; }
-  }
-  function stopSong() {
-    AUDIO.pause();
-    if (AUDIO._btn) AUDIO._btn.classList.remove("playing");
-    AUDIO._btn = null; AUDIO._code = null;
-    updateNowPlaying();
-  }
-  AUDIO.addEventListener("playing", updateNowPlaying);
-  AUDIO.addEventListener("ended", stopSong);
-  AUDIO.addEventListener("error", stopSong);
-  function toggleSong(code, btn) {
-    var s = S.songs[code];
-    if (!s || !s.url) return;
-    if (AUDIO._code === code && !AUDIO.paused) { stopSong(); return; }
-    stopSong();
-    AUDIO.src = s.url; AUDIO._code = code; AUDIO._btn = btn || null;
-    if (btn) btn.classList.add("playing");
-    AUDIO.play().catch(function () { stopSong(); });
-  }
-
   function buildBird(it) {
     var el = document.createElement("div");
     el.className = "bird" + (DOWNVOTED.has(it.img) ? " downvoted" : "") +
@@ -369,14 +332,11 @@
     var fb = document.createElement("div");
     fb.className = "fb";
     fb.innerHTML =
-      (S.songs[it.code] ? '<button class="song" title="Play its call">🔊</button>' : '') +
       '<button class="up" title="Good">👍</button>' +
       '<button class="down" title="Poor">👎</button>' +
       (it.ai ? '<button class="rev" title="Improve this drawing (review)">✎</button>' : '');
     fb.querySelector(".up").onclick = function (e) { e.stopPropagation(); doVote(it, "up", fb); };
     fb.querySelector(".down").onclick = function (e) { e.stopPropagation(); doVote(it, "down", fb); };
-    var songBtn = fb.querySelector(".song");
-    if (songBtn) songBtn.onclick = function (e) { e.stopPropagation(); toggleSong(it.code, songBtn); };
     if (it.ai) {
       fb.querySelector(".rev").onclick = function (e) {
         e.stopPropagation();
@@ -582,22 +542,6 @@
       extra.appendChild(document.createTextNode("Seen here this week: " + pct + "%"));
       extra.appendChild(document.createElement("br"));
     }
-    var song = S.songs[BIRD.code];
-    if (song && song.url) {
-      var lb = document.createElement("button");
-      lb.className = "listen";
-      lb.textContent = "🔊 Listen to its call";
-      lb.onclick = function () { toggleSong(BIRD.code, lb); };
-      extra.appendChild(lb);
-      extra.appendChild(document.createElement("br"));
-      var cr = document.createElement("a");
-      cr.className = "credit";
-      cr.href = song.page; cr.target = "_blank"; cr.rel = "noopener";
-      cr.textContent = "Recording: " + (song.artist || "Wikimedia Commons") +
-        (song.license ? " (" + song.license + ")" : "") + " · Wikimedia Commons";
-      extra.appendChild(cr);
-      extra.appendChild(document.createElement("br"));
-    }
     var ml = document.createElement("a");
     ml.href = "https://search.macaulaylibrary.org/catalog?taxonCode=" +
       encodeURIComponent(BIRD.code) + "&mediaType=photo";
@@ -744,14 +688,11 @@
         fetch(MANIFEST_URL).then(function (r) { return r.json(); }),
         fetch(PLATES_URL).then(function (r) { return r.ok ? r.json() : {}; })
           .catch(function () { return {}; }),
-        fetch("birds/songs.json").then(function (r) { return r.ok ? r.json() : {}; })
-          .catch(function () { return {}; }),
         initWorker(),
       ]);
       loadLabels(texts[0]);
       S.manifest = texts[1];
       S.plates = texts[2] || {};
-      S.songs = texts[3] || {};
       // Names come from the manifest when present; otherwise fall back to the
       // (large) taxonomy.csv for backward compatibility.
       if (!useManifestNames()) {

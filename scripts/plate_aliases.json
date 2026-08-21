@@ -1203,5 +1203,465 @@
 "sci": "anas",
 "common": "nettion crecca",
 "code": "gnwtea"
+},
+{
+"sci": "milvus regalis",
+"common": "",
+"code": "redkit1"
+},
+{
+"sci": "fatco islandus",
+"common": "",
+"code": "gyrfal"
+},
+{
+"sci": "falco candicans",
+"common": "",
+"code": "gyrfal"
+},
+{
+"sci": "falco zsalon",
+"common": "",
+"code": "merlin"
+},
+{
+"sci": "cireus ievaginosus",
+"common": "",
+"code": "wemhar1"
+},
+{
+"sci": "circus cineraceus",
+"common": "",
+"code": "monhar1"
+},
+{
+"sci": "syrnium aluco",
+"common": "",
+"code": "tawowl1"
+},
+{
+"sci": "nyctala tengmalmi",
+"common": "",
+"code": "borowl"
+},
+{
+"sci": "scops giu",
+"common": "",
+"code": "eursco1"
+},
+{
+"sci": "picus major",
+"common": "",
+"code": "grswoo"
+},
+{
+"sci": "picus minor",
+"common": "",
+"code": "leswoo1"
+},
+{
+"sci": "lanius rutilus",
+"common": "",
+"code": "wooshr1"
+},
+{
+"sci": "chelidon urbica",
+"common": "",
+"code": "comhom1"
+},
+{
+"sci": "cotile riparia",
+"common": "",
+"code": "banswa"
+},
+{
+"sci": "parus ater",
+"common": "",
+"code": "coatit2"
+},
+{
+"sci": "parus britannicus",
+"common": "",
+"code": "coatit2"
+},
+{
+"sci": "ampelis garrulus",
+"common": "",
+"code": "bohwax"
+},
+{
+"sci": "parus palustris",
+"common": "",
+"code": "martit2"
+},
+{
+"sci": "parus exruleus",
+"common": "",
+"code": "blutit"
+},
+{
+"sci": "parus cristatus",
+"common": "",
+"code": "cretit2"
+},
+{
+"sci": "acredula caudata",
+"common": "",
+"code": "lottit1"
+},
+{
+"sci": "accentor modularis",
+"common": "",
+"code": "dunnoc1"
+},
+{
+"sci": "cyanecula suecica",
+"common": "",
+"code": "blueth"
+},
+{
+"sci": "cyanecula leucocyana",
+"common": "",
+"code": "blueth"
+},
+{
+"sci": "ruticilla phoenicurus",
+"common": "",
+"code": "comred2"
+},
+{
+"sci": "cinclus aquaticus",
+"common": "",
+"code": "whtdip1"
+},
+{
+"sci": "cinclus melanogaster",
+"common": "",
+"code": "whtdip1"
+},
+{
+"sci": "motacilla borealis",
+"common": "",
+"code": "eaywag1"
+},
+{
+"sci": "anthus obscurus",
+"common": "",
+"code": "rocpip1"
+},
+{
+"sci": "otocorys alpestvis",
+"common": "",
+"code": "horlar"
+},
+{
+"sci": "plectrophanes nivalis",
+"common": "",
+"code": "snobun"
+},
+{
+"sci": "emberiza lepponica",
+"common": "",
+"code": "laplon"
+},
+{
+"sci": "alauda oristata",
+"common": "",
+"code": "crelar1"
+},
+{
+"sci": "fringilla spinus",
+"common": "",
+"code": "eursis"
+},
+{
+"sci": "linota hornemanni",
+"common": "",
+"code": "redpol1"
+},
+{
+"sci": "pringilla chloris",
+"common": "",
+"code": "eurgre1"
+},
+{
+"sci": "fringilla linania",
+"common": "",
+"code": "redpol1"
+},
+{
+"sci": "fringilla rufescens",
+"common": "",
+"code": "redpol1"
+},
+{
+"sci": "linota cannabina",
+"common": "",
+"code": "eurlin1"
+},
+{
+"sci": "fringilla flavirostris",
+"common": "",
+"code": "twite1"
+},
+{
+"sci": "pyrrhula erythrina",
+"common": "",
+"code": "comros"
+},
+{
+"sci": "pyrrhula vulgaris",
+"common": "",
+"code": "eurbul"
+},
+{
+"sci": "phyrrhula major",
+"common": "",
+"code": "eurbul"
+},
+{
+"sci": "lagopus scoticus",
+"common": "",
+"code": "wilpta2"
+},
+{
+"sci": "lagopus natus",
+"common": "",
+"code": "rocpta1"
+},
+{
+"sci": "crex pratensis",
+"common": "",
+"code": "corcra"
+},
+{
+"sci": "perdix cinerea",
+"common": "",
+"code": "grypar"
+},
+{
+"sci": "gdicnemus scolopax",
+"common": "",
+"code": "eutkne1"
+},
+{
+"sci": "squatarola cinerea",
+"common": "",
+"code": "bkbplo"
+},
+{
+"sci": "vanellus vulgaris",
+"common": "",
+"code": "norlap"
+},
+{
+"sci": "strepsilas interpres",
+"common": "",
+"code": "rudtur"
+},
+{
+"sci": "zigialitis hiaticula",
+"common": "",
+"code": "corplo"
+},
+{
+"sci": "scolopax gallinago",
+"common": "",
+"code": "comsni"
+},
+{
+"sci": "scolopax sabini",
+"common": "",
+"code": "comsni"
+},
+{
+"sci": "scolopax major",
+"common": "",
+"code": "gresni1"
+},
+{
+"sci": "tringa canutus",
+"common": "",
+"code": "redkno"
+},
+{
+"sci": "totanus fuscus",
+"common": "",
+"code": "spored"
+},
+{
+"sci": "hydrochelidon leucoptera",
+"common": "",
+"code": "whwter"
+},
+{
+"sci": "larus melanocephalus",
+"common": "",
+"code": "medgul1"
+},
+{
+"sci": "larus glaucus",
+"common": "",
+"code": "glagul"
+},
+{
+"sci": "lestris pomarinus",
+"common": "",
+"code": "pomjae"
+},
+{
+"sci": "lestris richardsoni",
+"common": "",
+"code": "parjae"
+},
+{
+"sci": "lestris parasiticus",
+"common": "",
+"code": "lotjae"
+},
+{
+"sci": "uria troile",
+"common": "",
+"code": "commur"
+},
+{
+"sci": "mergulus alle",
+"common": "",
+"code": "doveki"
+},
+{
+"sci": "colymbus glacialis",
+"common": "",
+"code": "comloo"
+},
+{
+"sci": "colymbus areticus",
+"common": "",
+"code": "arcloo"
+},
+{
+"sci": "colymbus septentrionalis",
+"common": "",
+"code": "retloo"
+},
+{
+"sci": "colymbus adamsi",
+"common": "",
+"code": "yebloo"
+},
+{
+"sci": "podiceps minor",
+"common": "",
+"code": "litgre1"
+},
+{
+"sci": "procellaria leucorrhoa",
+"common": "",
+"code": "lcspet"
+},
+{
+"sci": "phalacrocorax graculus",
+"common": "",
+"code": "eursha1"
+},
+{
+"sci": "bernicia brenta",
+"common": "",
+"code": "brant"
+},
+{
+"sci": "cygnus bewicki",
+"common": "",
+"code": "tunswa"
+},
+{
+"sci": "cygnus musicus",
+"common": "",
+"code": "whoswa"
+},
+{
+"sci": "tadorna cornuta",
+"common": "",
+"code": "comshe"
+},
+{
+"sci": "anas clypeata",
+"common": "",
+"code": "norsho"
+},
+{
+"sci": "anas circia",
+"common": "",
+"code": "gargan"
+},
+{
+"sci": "anser segetum",
+"common": "",
+"code": "taibeg1"
+},
+{
+"sci": "faligula clangula",
+"common": "",
+"code": "comgol"
+},
+{
+"sci": "fuligula nyroca",
+"common": "",
+"code": "ferduc"
+},
+{
+"sci": "",
+"common": "white bellied swift",
+"code": "alpswi1"
+},
+{
+"sci": "",
+"common": "pied on common wagtail",
+"code": "whiwag"
+},
+{
+"sci": "",
+"common": "ptarmigan summer",
+"code": "rocpta1"
+},
+{
+"sci": "",
+"common": "white tailed or sea eagle aduiz",
+"code": "whteag"
+},
+{
+"sci": "",
+"common": "white tailed or sea eagle juv",
+"code": "whteag"
+},
+{
+"sci": "falco per",
+"common": "peregri",
+"code": "perfal"
+},
+{
+"sci": "astur palumbarius",
+"common": "",
+"code": "norgos1"
+},
+{
+"sci": "strix flammea",
+"common": "",
+"code": "brnowl"
+},
+{
+"sci": "loxia bifasciata",
+"common": "",
+"code": "whwcro"
+},
+{
+"sci": "ardea bubuleas",
+"common": "",
+"code": "categr1"
+},
+{
+"sci": "nycticorax griseus",
+"common": "",
+"code": "bcnher"
 }
 ]

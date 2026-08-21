@@ -92,6 +92,11 @@ BOOKS = {
                     ("v8", "historyofbirdsof18dres"),
                     ("v9", "historyofbirdsof19dres")],
     },
+    "lilford": {   # plates by Archibald Thorburn and J. G. Keulemans
+        "title": "Coloured Figures of the Birds of the British Islands",
+        "author": "Lord Lilford",
+        "volumes": [(f"v{i}", f"colouredfigureso0{i}lilf") for i in range(1, 8)],
+    },
     "naumann": {
         "title": "Naturgeschichte der Vögel Deutschlands",
         "author": "Johann Andreas Naumann",

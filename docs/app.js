@@ -44,10 +44,11 @@
     gould: "John Gould, The Birds of Europe",
     dresser: "H. E. Dresser, A History of the Birds of Europe",
     vonwright: "M. & W. von Wright, Svenska fåglar",
+    lilford: "Lord Lilford, Coloured Figures of the Birds of the British Islands (Thorburn & Keulemans)",
   };
   // Book sources in default preference order; short labels for the detail view.
-  var BOOKS = ["gould", "dresser", "vonwright"];
-  var BOOK_LABEL = { gould: "Gould", dresser: "Dresser", vonwright: "von Wright" };
+  var BOOKS = ["gould", "dresser", "vonwright", "lilford"];
+  var BOOK_LABEL = { gould: "Gould", dresser: "Dresser", vonwright: "von Wright", lilford: "Lilford" };
 
   var S = {
     labels: [], codeToIdx: {}, nSpecies: 0,

@@ -235,3 +235,18 @@ now have a von Wright plate (15 of them had no plate before) -> plate coverage
 go ghostly on dark grounds in all three books (paper->transparent); a caption
 survives when it touches the bird (magpie). Re-run:
 `python fetch_vonwright.py && python match_plates.py --emit --books vonwright`.
+
+## Lilford — Coloured Figures of the Birds of the British Islands (Thorburn / Keulemans)
+Source: Internet Archive, 7 volumes (colouredfigureso01lilf .. 07lilf), 1885-97.
+- [x] Register `lilford` in `extract_book_plates.py` BOOKS; test-extract one
+      volume, then run all 7 (plate detection + Tesseract caption OCR).
+- [x] `match_plates.py`: add to BOOKS; aliases for 1890s names as needed.
+- [x] App: "Lilford" source button, BOOK_INFO, help text.
+- [x] Emit with `--books lilford`, verify coverage, spot-check plates.
+
+Review: 470 plates extracted from IA (415 with OCR'd captions); 92 alias
+entries for 1885-97 names; 325 app species get a Lilford plate (10 new) ->
+plate coverage 428 -> 438 of 522. Existing books untouched (`--books lilford`).
+`plate_skip.json` culls hand-rejected plates (one so far). Menu now fits five
+source buttons (compact #src padding, 400px cap; wraps on phones).
+WebP was measured against the 256-colour PNGs: no gain at 600px, kept PNG.

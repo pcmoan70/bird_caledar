@@ -27,8 +27,9 @@ SELECTED = os.path.join(HERE, "selected_species.txt")
 OUT_DIR = os.path.join(ROOT, "docs", "plates")
 ALIASES = os.path.join(HERE, "plate_aliases.json")
 MULTI = os.path.join(HERE, "plate_multi.json")
+SKIP = os.path.join(HERE, "plate_skip.json")   # hand-culled plates: [{book, identifier, leaf}]
 
-BOOKS = ("gould", "dresser", "vonwright")
+BOOKS = ("gould", "dresser", "vonwright", "lilford")
 # Books whose plates are local files (fetched from Wikimedia Commons by
 # fetch_vonwright.py) rather than Internet Archive page scans.
 LOCAL_BOOKS = {"vonwright"}
@@ -327,9 +328,14 @@ def read_plates(book):
     path = os.path.join(PLATES, book, "index.csv")
     if not os.path.exists(path):
         return []
+    skip = set()
+    if os.path.exists(SKIP):
+        skip = {(s["book"], s["identifier"], str(s["leaf"]))
+                for s in json.load(open(SKIP, encoding="utf-8"))}
     with open(path, encoding="utf-8") as f:
         return [r for r in csv.DictReader(f)
-                if r.get("species_common") or r.get("species_sci")]
+                if (r.get("species_common") or r.get("species_sci"))
+                and (book, r.get("identifier"), str(r.get("leaf"))) not in skip]
 
 
 def main():

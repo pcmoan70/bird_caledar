@@ -557,6 +557,15 @@
     state.textContent = edited ? "edited here" :
       (entry && entry.check === "conflict" ? "sources disagree on size" :
         (entry && entry.check === "ok" ? "cross-checked" : ""));
+    // Field notes are line-based and long; size the box to its content (up to
+    // 44% of the window) instead of leaving most of it hidden behind a scroll.
+    var box2 = document.getElementById("bird-desc");
+    box2.style.height = "auto";
+    box2.style.height = Math.min(window.innerHeight * 0.44,
+                                 box2.scrollHeight + 4) + "px";
+    // ... and let the plate give up some height when there is a note to read.
+    var card = document.querySelector(".bird-card");
+    if (card) card.classList.toggle("has-notes", !!(entry && entry.notes));
 
     foot.textContent = "";
     var m = entry && entry.measures;
@@ -570,7 +579,11 @@
     if (entry && entry.url) {
       var a = document.createElement("a");
       a.href = entry.url; a.target = "_blank"; a.rel = "noopener";
-      a.textContent = "Source: Wikipedia (" + (entry.lang || "en") + "), CC BY-SA →";
+      // Field notes are compiled from every edition consulted; a plain
+      // description quotes the one edition it came from.
+      a.textContent = entry.notes
+        ? "Compiled from Wikipedia (" + (entry.langs || ["en"]).join(", ") + "), CC BY-SA →"
+        : "Source: Wikipedia (" + (entry.lang || "en") + "), CC BY-SA →";
       foot.appendChild(a);
     }
     if (edited) {

@@ -119,6 +119,38 @@ python build_manifest.py
 }
 ```
 
+## Field notes
+
+Every species carries **field notes** — what an observer would write in a notebook, including
+the species it can be confused with and what separates them. They are compiled from the
+identification sections of the English, German and Swedish Wikipedia articles (CC BY-SA 4.0),
+whose body length, wingspan and mass are cross-referenced between editions before use.
+
+The note appears under the large image in the detail view and is **editable**: edits are kept in
+that browser and can be exported, applied back to the dataset, and reused in the image-generation
+prompts.
+
+```
+scripts/
+  fetch_field_id.py        Wikidata + Wikipedia -> field_id.json (sources, measurements, checks)
+  prep_field_notes.py      confusion species per bird + source packs for drafting
+  field_notes_style.md     the house style the notes are written to
+  merge_field_notes.py     validate drafts (invented numbers, wrong candidates) -> field_notes.json
+  build_field_id_web.py    slim web cut -> docs/field_id.json
+  apply_field_id_edits.py  fold edits exported from the app back into the dataset
+  distill_field_id.py      prompt-shaped field marks -> id_features_sourced.json
+```
+
+```bash
+cd scripts
+python fetch_field_id.py            # sources + cross-check (slow, polite to Wikipedia)
+python prep_field_notes.py          # confusion species + source packs
+#   ... draft the notes into scripts/field_notes_out/ ...
+python merge_field_notes.py         # validate + merge + render
+python build_field_id_web.py        # -> docs/field_id.json
+python distill_field_id.py          # -> scripts/id_features_sourced.json
+```
+
 ## Running the web app
 
 > The web front-end is in progress; the image pipeline and model data are in place.

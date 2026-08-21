@@ -17,6 +17,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 SRC = os.path.join(HERE, "field_id.json")
+NOTES = os.path.join(HERE, "field_notes.json")
 OUT = os.path.join(ROOT, "docs", "field_id.json")
 MAX_CHARS = 1400        # keep the payload small; the box shows a readable excerpt
 PREFER = ("en", "de", "sv")
@@ -34,6 +35,7 @@ def trim(text, limit=MAX_CHARS):
 
 def main():
     data = json.load(open(SRC, encoding="utf-8"))
+    notes = json.load(open(NOTES, encoding="utf-8")) if os.path.exists(NOTES) else {}
     out = {"_about": {
         "what": "Identification text shown under the large image, per species code.",
         "license": "Wikipedia text, CC BY-SA 4.0 — attribute via url + revid. "
@@ -46,11 +48,18 @@ def main():
         if code.startswith("_"):
             continue
         entry = None
+        note = notes.get(code)
         if rec.get("edited_text"):
             entry = {"text": trim(rec["edited_text"]), "edited": True}
             src = rec["sources"].get(rec.get("edited_from", "en")) or \
                 next(iter(rec["sources"].values()), None)
             edits += 1
+        elif note and note.get("text"):
+            # Field notes compiled from the sourced descriptions — kept whole
+            # (they are already terse) and marked so the app can label them.
+            entry = {"text": note["text"], "notes": True,
+                     "langs": sorted(note.get("sources", {})) or ["en"]}
+            src = rec["sources"].get("en") or next(iter(rec["sources"].values()), None)
         else:
             lang = next((l for l in PREFER if l in rec["sources"]), None)
             if not lang:

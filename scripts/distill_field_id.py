@@ -25,6 +25,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, "field_id.json")
+NOTES = os.path.join(HERE, "field_notes.json")
 OUT = os.path.join(HERE, "id_features_sourced.json")
 MAX_WORDS = 55
 
@@ -109,10 +110,22 @@ def main():
     args = ap.parse_args()
 
     data = json.load(open(SRC, encoding="utf-8"))
-    out, skipped = {}, 0
+    notes = json.load(open(NOTES, encoding="utf-8")) if os.path.exists(NOTES) else {}
+    out, skipped, from_notes = {}, 0, 0
     for code, rec in data.items():
         if code.startswith("_"):
             continue
+        note = notes.get(code)
+        if note and not rec.get("edited_text"):
+            # Field notes are already written as field marks — the plumage and
+            # bare-parts lines are exactly what the prompt needs.
+            clause = " ".join(x for x in (note.get("plumage"),
+                                          note.get("bare_parts")) if x)
+            clause = " ".join(clause.split())
+            if len(clause.split()) >= 8:
+                out[code] = clause
+                from_notes += 1
+                continue
         text, lang = source_text(rec)
         if lang == "edited":
             # A description edited by hand is authoritative: keep it as written,
@@ -139,8 +152,8 @@ def main():
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=1)
     lens = sorted(len(v.split()) for v in out.values())
-    print(f"wrote {len(out)} clauses to {OUT} ({skipped} species skipped: "
-          f"no English text or too little plumage detail)")
+    print(f"wrote {len(out)} clauses to {OUT} ({from_notes} from field notes, "
+          f"{skipped} skipped: no English text or too little plumage detail)")
     print(f"words per clause: min {lens[0]}, median {lens[len(lens) // 2]}, max {lens[-1]}")
     for code in list(out)[:3]:
         print(f"  {code}: {out[code][:150]}")

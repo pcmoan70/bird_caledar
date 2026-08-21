@@ -292,3 +292,41 @@ Review: 515 clauses distilled, 0 with parse artefacts. Curated id_features.json
 is untouched — the sourced clause is additive, so hand-tuned prompts still lead.
 Trap hit: an earlier heredoc wrote a literal 0x08 byte where `` was intended,
 so a filter silently never matched (see tasks/lessons.md).
+
+## Professional field notes + confusion species (2026-08-22)
+The stored descriptions are encyclopaedic Wikipedia prose. Rewrite them as
+field notes in a consistent house style, and state the confusion species and
+how to separate them.
+
+Format per species (plain text, still editable in the app):
+  Jizz — size/shape/structure, with the verified measurements.
+  Plumage — adult key marks; sexes when dimorphic; juvenile when distinct.
+  Bare parts — bill / legs / eye.
+  In the field — flight, gait, habitat, behaviour worth using for ID.
+  Similar species — one line per confusion species: what actually separates it.
+
+- [x] `scripts/prep_field_notes.py`: confusion candidates per species (same
+      genus among app species; species named near "similar/confused/
+      distinguished" in the sources; same family within +-25% body length),
+      capped at 4; write per-batch source packs for the drafting pass.
+- [x] Draft the notes from the stored en/de/sv sources only (no outside
+      knowledge), in parallel batches; strict JSON out.
+- [x] Validate mechanically: schema, confusion codes exist, measurements match
+      the cross-checked figures, no numbers absent from the sources.
+- [x] Merge to `scripts/field_notes.json`, keep CC BY-SA attribution (derived
+      work), rebuild `docs/field_id.json` + distilled prompt clauses.
+
+Review: `scripts/field_notes.json` — all 522 species now carry field notes in a
+fixed house style (Jizz / Plumage / Bare parts / In the field / Similar
+species), written only from the stored en/de/sv sources. 503 species name
+confusion species, 1827 separations in all; median note 1441 characters; 1127
+gaps recorded per species in `unsupported` rather than filled from memory.
+Every draft passed `merge_field_notes.py` (schema, candidate list, word limits,
+and no number absent from the sources at any unit scale).
+Two fixes the drafting surfaced: `prep_field_notes.sane()` drops mislabelled
+measurements (wingspan stored as length), and Anatidae candidates now stay
+inside their guild, so a sea duck is compared with scoters and eiders rather
+than with geese (28 species re-drafted).
+Notes feed both the app (docs/field_id.json, still editable) and the image
+prompts (`distill_field_id.py` now takes the plumage + bare-parts lines: 522
+clauses, all from notes).

@@ -54,6 +54,7 @@
     labels: [], codeToIdx: {}, nSpecies: 0,
     tax: {}, langs: [], lang: "en",
     manifest: {}, plates: {}, probs: {},   // probs: {weekIndex: Float32Array(nSpecies)}
+    fieldId: null,                         // field_id.json, fetched on first detail view
     lat: DEFAULT.lat, lon: DEFAULT.lon, week: 1, mode: "A", src: "gould",
     aiBW: false,
   };
@@ -484,6 +485,115 @@
   // straight to the scanned page.
   var BIRD = { code: null, variants: [], idx: 0 };
 
+  // ---- Identification text -------------------------------------------------
+  // field_id.json carries a sourced description per species (Wikipedia, CC
+  // BY-SA, cross-referenced between three language editions — see
+  // scripts/fetch_field_id.py). It is shown in an editable box under the large
+  // image; edits stay in this browser and can be exported as field_id_edits.json
+  // for scripts/apply_field_id_edits.py to fold back into the dataset.
+  var FIELDID_URL = "field_id.json";
+  var DESC_KEY = "birdcal.desc.edits";
+  var descEdits = {};
+  try { descEdits = JSON.parse(localStorage.getItem(DESC_KEY) || "{}"); } catch (e) {}
+
+  function saveDescEdits() {
+    try { localStorage.setItem(DESC_KEY, JSON.stringify(descEdits)); } catch (e) {}
+  }
+
+  function descEntry(code) { return (S.fieldId && S.fieldId[code]) || null; }
+
+  // ~600 kB, and only needed once a bird is opened — fetched on first use.
+  var _fieldIdReq = null;
+  function loadFieldId() {
+    if (!_fieldIdReq) {
+      _fieldIdReq = fetch(FIELDID_URL)
+        .then(function (r) { return r.ok ? r.json() : {}; })
+        .catch(function () { return {}; })
+        .then(function (j) { S.fieldId = j; return j; });
+    }
+    return _fieldIdReq;
+  }
+
+  function descText(code) {
+    var edit = descEdits[code];
+    if (edit && typeof edit.text === "string") return edit.text;
+    var e = descEntry(code);
+    return e ? e.text : "";
+  }
+
+  function downloadDescEdits() {
+    var out = {};
+    Object.keys(descEdits).forEach(function (c) {
+      out[c] = { text: descEdits[c].text, ts: descEdits[c].ts,
+        base_revid: descEdits[c].base_revid || null, lang: descEdits[c].lang || "" };
+    });
+    var blob = new Blob([JSON.stringify(out, null, 1)], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "field_id_edits.json";
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  }
+
+  // Render the description box for the species in the open detail view.
+  function showDescription(code) {
+    var wrap = document.getElementById("bird-desc-wrap");
+    var box = document.getElementById("bird-desc");
+    var entry = descEntry(code);
+    if (!entry && !descEdits[code]) { wrap.hidden = true; return; }
+    wrap.hidden = false;
+    box.value = descText(code);
+    box.dataset.code = code;
+    showDescriptionFooter(code);
+  }
+
+  // The status line and links below the box — redrawn on every edit, while the
+  // textarea itself is left alone so the caret doesn't jump.
+  function showDescriptionFooter(code) {
+    var state = document.getElementById("bird-desc-state");
+    var foot = document.getElementById("bird-desc-foot");
+    var entry = descEntry(code);
+    var edited = !!descEdits[code];
+    state.textContent = edited ? "edited here" :
+      (entry && entry.check === "conflict" ? "sources disagree on size" :
+        (entry && entry.check === "ok" ? "cross-checked" : ""));
+
+    foot.textContent = "";
+    var m = entry && entry.measures;
+    if (m) {
+      var bits = [];
+      if (m.length) bits.push("length " + fmtRange(m.length, "cm"));
+      if (m.wingspan) bits.push("wingspan " + fmtRange(m.wingspan, "cm"));
+      if (m.mass) bits.push("weight " + fmtRange(m.mass, "g"));
+      if (bits.length) foot.appendChild(document.createTextNode(bits.join(" · ")));
+    }
+    if (entry && entry.url) {
+      var a = document.createElement("a");
+      a.href = entry.url; a.target = "_blank"; a.rel = "noopener";
+      a.textContent = "Source: Wikipedia (" + (entry.lang || "en") + "), CC BY-SA →";
+      foot.appendChild(a);
+    }
+    if (edited) {
+      var revert = document.createElement("button");
+      revert.type = "button";
+      revert.textContent = "Revert to source";
+      revert.onclick = function () {
+        delete descEdits[code]; saveDescEdits(); showDescription(code);
+      };
+      foot.appendChild(revert);
+      var dl = document.createElement("button");
+      dl.type = "button";
+      dl.textContent = "Export all edits (" + Object.keys(descEdits).length + ")";
+      dl.onclick = downloadDescEdits;
+      foot.appendChild(dl);
+    }
+  }
+
+  function fmtRange(r, unit) {
+    var lo = Math.round(r[0] * 10) / 10, hi = Math.round(r[1] * 10) / 10;
+    return (lo === hi ? lo : lo + "–" + hi) + " " + unit;
+  }
+
   function birdVariants(code) {
     var out = [];
     var p = S.plates[code] || {};
@@ -522,6 +632,7 @@
     img.style.cursor = BIRD.variants.length > 1 ? "pointer" : "default";
     document.getElementById("bird-name").textContent = nm.common;
     document.getElementById("bird-sci").textContent = nm.sci || "";
+    showDescription(BIRD.code);
 
     var srcEl = document.getElementById("bird-src");
     srcEl.textContent = "Source: ";
@@ -587,6 +698,11 @@
     BIRD.idx = at >= 0 ? at : 0;
     showBirdVariant();
     document.getElementById("bird-modal").hidden = false;
+    if (!S.fieldId) {
+      loadFieldId().then(function () {
+        if (BIRD.code === it.code) showDescription(it.code);
+      });
+    }
   }
 
   function setupBirdModal() {
@@ -597,6 +713,23 @@
         BIRD.idx = (BIRD.idx + 1) % BIRD.variants.length;
         showBirdVariant();
       }
+    });
+    // Edits are kept per species in this browser; an unchanged box stores nothing.
+    var box = document.getElementById("bird-desc");
+    var pending = null;
+    box.addEventListener("input", function () {
+      var code = box.dataset.code;
+      if (!code) return;
+      clearTimeout(pending);
+      pending = setTimeout(function () {
+        var entry = descEntry(code);
+        var text = box.value;
+        if (entry && text.trim() === (entry.text || "").trim()) delete descEdits[code];
+        else descEdits[code] = { text: text, ts: new Date().toISOString(),
+          base_revid: entry ? entry.revid : null, lang: entry ? entry.lang : "" };
+        saveDescEdits();
+        showDescriptionFooter(code);
+      }, 400);
     });
     modal.addEventListener("click", function (e) {
       if (e.target === modal) modal.hidden = true;   // click backdrop to close

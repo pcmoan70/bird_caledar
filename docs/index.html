@@ -108,6 +108,10 @@
           <li><strong>Hover</strong> a bird for its name and how often it's seen
             here this week; <strong>click</strong> it for photos and sounds on
             the Macaulay Library. Use 👍 / 👎 to rate an illustration.</li>
+          <li>The <strong>How to identify it</strong> box under the large image
+            quotes Wikipedia (CC BY-SA), cross-checked against the German and
+            Swedish editions. You can <strong>edit the text</strong> — changes
+            stay in this browser and can be exported.</li>
         </ul>
         <h4>Where the images come from</h4>
         <ul>
@@ -135,6 +139,16 @@
       <div class="bird-info">
         <div id="bird-name" class="bird-name"></div>
         <div id="bird-sci" class="bird-sci"></div>
+        <div id="bird-desc-wrap" class="bird-desc-wrap" hidden>
+          <div class="bird-desc-head">
+            <span class="bird-desc-title">How to identify it</span>
+            <span id="bird-desc-state" class="bird-desc-state"></span>
+          </div>
+          <textarea id="bird-desc" class="bird-desc" rows="6"
+                    aria-label="Identification description (editable)"
+                    spellcheck="false"></textarea>
+          <div id="bird-desc-foot" class="bird-desc-foot"></div>
+        </div>
         <div id="bird-src" class="bird-src"></div>
         <div id="bird-extra" class="bird-extra"></div>
       </div>

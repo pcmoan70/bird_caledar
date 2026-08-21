@@ -271,3 +271,24 @@ Charadrius dubius etc.), not wrong birds. Re-run checks offline with
 Parsing rules that mattered: cue words before the figure win over ones after;
 a window never crosses a neighbouring figure; body-part words (wing chord,
 Flügellänge, stjärt) disqualify a figure; imperial conversions are stripped.
+
+## Field-ID text in the app + in the generation prompts
+- [x] `build_field_id_web.py` -> `docs/field_id.json` (622 kB: best text per
+      species + source url/revid + check status + agreed measurements).
+- [x] Detail view: "How to identify it" textarea under the large image, with
+      cross-check state, measurements, source link. Fetched lazily on first
+      open. Edits are per-species in localStorage (`birdcal.desc.edits`),
+      with Revert and "Export all edits" -> field_id_edits.json.
+- [x] `apply_field_id_edits.py`: folds exported edits into `field_id.json` as
+      `edited_text` (sources kept underneath), then rebuilds the web file and
+      the distilled clauses. `--revert code,code` undoes one.
+- [x] `distill_field_id.py` -> `id_features_sourced.json`: whole-sentence
+      plumage clause (<=55 words) per species; a hand edit is used verbatim.
+- [x] `regen_flagged.improved_prompt()` appends " Described in the literature
+      as: ..." after the curated field marks; loader re-reads on mtime change
+      so a running worker picks up edits.
+
+Review: 515 clauses distilled, 0 with parse artefacts. Curated id_features.json
+is untouched — the sourced clause is additive, so hand-tuned prompts still lead.
+Trap hit: an earlier heredoc wrote a literal 0x08 byte where `` was intended,
+so a filter silently never matched (see tasks/lessons.md).

@@ -30,3 +30,18 @@ demand and are slow by design. Parallel fetches don't go faster, they get cut of
 **How to apply:** One request at a time with the polite sleep in `EX._get`, run
 in the background and wait. If files are missing after a run, wait 10 min and
 re-run the (idempotent) fetch; it skips what's on disk and rewrites the CSV.
+
+## Never write regexes through a shell heredoc (2026-08-21)
+**Mistake:** Patched `distill_field_id.py` with `python - <<'PY'` containing
+`r"(is|are...)"`. The backslash-b reached Python as a literal backspace byte
+(0x08), so the compiled regex was `(is|...)` — it never matched, and a
+sentence filter silently did nothing. Three rounds of debugging blamed the
+logic; `od -c` on the line found the real cause.
+
+**Why:** Backslash escapes get eaten by the heredoc/`python -c` layer, and the
+resulting file still compiles, so nothing fails loudly.
+
+**How to apply:** Use the Edit/Write tools for any code containing regexes or
+escapes — never `sed`/heredoc string surgery. If a filter "cannot" be failing,
+dump the raw bytes (`od -c`, `open(...,'rb')`) before re-reasoning about logic.
+Also: `python -B` / clear `__pycache__` when a module seems stale.

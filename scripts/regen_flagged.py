@@ -53,6 +53,9 @@ QCDIR = os.path.join(HERE, "qc_out")
 BA = os.path.join(QCDIR, "ba")
 FAMILIES = os.path.join(HERE, "families.json")
 IDFEATURES = os.path.join(HERE, "id_features.json")
+# Field marks distilled from the sourced, cross-referenced descriptions
+# (scripts/distill_field_id.py) — grounds the prompt on checked plumage wording.
+IDSOURCED = os.path.join(HERE, "id_features_sourced.json")
 FEETFEATURES = os.path.join(HERE, "feet_features.json")  # family -> legs/feet clause
 RETRY = os.path.join(HERE, "retry_rounds.json")  # {code: round} — bumped when a
 #   species is marked "none good enough" so its re-gen uses fresh seeds.
@@ -105,6 +108,21 @@ def load_id_features():
     return json.load(open(IDFEATURES, encoding="utf-8")) if os.path.exists(IDFEATURES) else {}
 
 
+_SOURCED = [None, 0.0]     # cached (data, mtime)
+
+
+def load_sourced_ids():
+    """Distilled sourced field marks, re-read when the file changes so a
+    running worker picks up edits applied from the app."""
+    if not os.path.exists(IDSOURCED):
+        return {}
+    mtime = os.path.getmtime(IDSOURCED)
+    if _SOURCED[0] is None or mtime != _SOURCED[1]:
+        _SOURCED[0] = json.load(open(IDSOURCED, encoding="utf-8"))
+        _SOURCED[1] = mtime
+    return _SOURCED[0]
+
+
 _FEET = [None]
 
 
@@ -123,7 +141,7 @@ def load_retry():
     return json.load(open(RETRY, encoding="utf-8")) if os.path.exists(RETRY) else {}
 
 
-def improved_prompt(common, sci, code, stance, fams, ids):
+def improved_prompt(common, sci, code, stance, fams, ids, sourced=None):
     fam = fams.get(code) or [None, None]
     fam_clause = ""
     if fam[0]:
@@ -131,6 +149,12 @@ def improved_prompt(common, sci, code, stance, fams, ids):
         fam_clause = f", a member of the family {fam[0]}{en}"
     id_text = (ids or {}).get(code, "").strip()
     id_clause = f" Identification — emphasise these field marks: {id_text}" if id_text else ""
+    # A second, sourced description of the plumage (cross-referenced between
+    # Wikipedia editions, or hand-edited in the app). It follows the curated
+    # clause so a hand-tuned prompt still leads.
+    src_text = (sourced if sourced is not None else load_sourced_ids()).get(code, "").strip()
+    if src_text:
+        id_clause += " Described in the literature as: " + src_text.rstrip(".") + "."
     # Family-level legs/feet morphology — anchors the feet even when the
     # reference photo hides them (bird on water, crouched, feet behind a perch).
     feet = load_feet()

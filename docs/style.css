@@ -98,6 +98,34 @@ select { border: 1px solid #cfc8b6; border-radius: 8px; padding: 5px 8px; color:
   font-size: 26px; font-weight: 600;
 }
 .bird-sci { font-style: italic; color: var(--muted); margin-top: 2px; }
+/* Editable identification text under the large image. Edits live in this
+   browser (localStorage) and can be exported for scripts/apply_field_id_edits.py */
+.bird-desc-wrap { margin-top: 14px; text-align: left; width: min(760px, 100%); }
+.bird-desc-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  font-size: 12px; color: var(--muted); margin-bottom: 4px;
+}
+.bird-desc-title { text-transform: uppercase; letter-spacing: 0.06em; }
+.bird-desc-state { font-style: italic; }
+.bird-desc {
+  width: 100%; box-sizing: border-box; resize: vertical; min-height: 96px;
+  font: inherit; font-size: 14px; line-height: 1.55; color: var(--ink);
+  background: rgba(0,0,0,0.02); border: 1px solid #cfc8b6; border-radius: 10px;
+  padding: 10px 12px;
+}
+.bird-desc:focus { outline: none; border-color: var(--ink); background: var(--paper); }
+.bird-desc-foot {
+  margin-top: 6px; font-size: 12px; color: var(--muted);
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+}
+.bird-desc-foot a, .bird-desc-foot button {
+  color: var(--ink); font: inherit; font-size: 12px;
+}
+.bird-desc-foot button {
+  border: 1px solid #cfc8b6; border-radius: 999px; background: transparent;
+  padding: 3px 10px; cursor: pointer;
+}
+.bird-desc-foot button:hover { background: rgba(0,0,0,0.05); }
 .bird-src { margin-top: 12px; font-size: 14px; }
 .bird-extra { margin-top: 8px; font-size: 13px; color: var(--muted); line-height: 1.6; }
 .bird-src a, .bird-extra a { color: var(--ink); }

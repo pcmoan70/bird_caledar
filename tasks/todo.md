@@ -250,3 +250,24 @@ plate coverage 428 -> 438 of 522. Existing books untouched (`--books lilford`).
 `plate_skip.json` culls hand-rejected plates (one so far). Menu now fits five
 source buttons (compact #src padding, 400px cap; wraps on phones).
 WebP was measured against the 256-colour PNGs: no gain at 600px, kept PNG.
+
+## Field-ID descriptions (Western Palearctic), sourced + cross-referenced
+- [x] `scripts/fetch_field_id.py`: for each app species resolve the Wikidata
+      item by scientific name; pull the Description/Identification section from
+      en-Wikipedia and a second edition (de, else sv) + Wikidata measurements.
+- [x] Cross-reference: taxon identity (article binomial == ours), and
+      length / wingspan / mass extracted from each source must agree (overlap).
+- [x] Store `scripts/field_id.json` (text verbatim, CC BY-SA attribution, rev
+      ids, measurements, check status) + conflict report; run for all species.
+
+Review: `scripts/field_id.json` (3.4 MB) holds the identification text for all
+522 species from three independent Wikipedia editions (en 521, de 504, sv 519;
+58 species fall back to lead paragraphs), each with article url + revision id,
+CC BY-SA 4.0. Cross-check of body length / wingspan / mass parsed from each
+edition: 357 ok, 62 conflict, 103 unverified (only one edition quotes a
+figure). 5 taxon mismatches are eBird-vs-Wikidata renames (Thinornis dubius /
+Charadrius dubius etc.), not wrong birds. Re-run checks offline with
+`python fetch_field_id.py --recheck`; conflicts list with `--report`.
+Parsing rules that mattered: cue words before the figure win over ones after;
+a window never crosses a neighbouring figure; body-part words (wing chord,
+Flügellänge, stjärt) disqualify a figure; imperial conversions are stripped.

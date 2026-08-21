@@ -18,3 +18,15 @@ working set / command line, not the launcher PID:
 that PID's tree. After killing, verify memory is actually released and the other
 job's log resumes writing before assuming success. Don't run two FLUX processes
 on this box at once — they thrash.
+
+## Wikimedia Commons downloads: keep them serial (2026-08-21)
+**Mistake:** Started a 4-thread helper to speed up `fetch_vonwright.py`'s
+~8 s/file Commons thumbnail downloads. Commons answered 429 (Retry-After 600)
+for ~10 minutes, so both the helper and the main script lost files.
+
+**Why:** Commons throttles per client; thumbnail renditions are rendered on
+demand and are slow by design. Parallel fetches don't go faster, they get cut off.
+
+**How to apply:** One request at a time with the polite sleep in `EX._get`, run
+in the background and wait. If files are missing after a run, wait 10 min and
+re-run the (idempotent) fetch; it skips what's on disk and rewrites the CSV.

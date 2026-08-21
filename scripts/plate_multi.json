@@ -60,5 +60,37 @@
 "lotjae",
 "parjae"
 ]
+},
+{
+"sci": "lyrurus tetrix tetrastes bonasia",
+"common": "",
+"codes": [
+"blagro1",
+"hazgro1"
+]
+},
+{
+"sci": "parus ater and marsh tit parus palustris",
+"common": "coal tit",
+"codes": [
+"coatit2",
+"martit2"
+]
+},
+{
+"sci": "nannus troglodytes goldcrest regulus regulus",
+"common": "eurasian wren",
+"codes": [
+"winwre4",
+"goldcr1"
+]
+},
+{
+"sci": "turdus usicus",
+"common": "redwing song thrush",
+"codes": [
+"redwin",
+"sonthr1"
+]
 }
 ]

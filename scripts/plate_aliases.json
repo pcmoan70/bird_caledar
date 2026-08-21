@@ -1038,5 +1038,170 @@
 "sci": "",
 "common": "sociable plover",
 "code": "soclap1"
+},
+{
+"sci": "cypselus apus",
+"common": "",
+"code": "comswi"
+},
+{
+"sci": "nyroca marila",
+"common": "",
+"code": "gresca"
+},
+{
+"sci": "motacilla budytes flava thunbergi",
+"common": "",
+"code": "eaywag1"
+},
+{
+"sci": "acanthis linaria",
+"common": "",
+"code": "redpol1"
+},
+{
+"sci": "acanthis cannabina",
+"common": "",
+"code": "eurlin1"
+},
+{
+"sci": "uria troille",
+"common": "",
+"code": "commur"
+},
+{
+"sci": "larus leucopterus",
+"common": "",
+"code": "y00478"
+},
+{
+"sci": "oidemia nigra",
+"common": "",
+"code": "blksco1"
+},
+{
+"sci": "colymbus arcticus",
+"common": "",
+"code": "arcloo"
+},
+{
+"sci": "dryobates medius",
+"common": "",
+"code": "miswoo1"
+},
+{
+"sci": "hirundo urbica",
+"common": "",
+"code": "comhom1"
+},
+{
+"sci": "acrocephalus streperus",
+"common": "",
+"code": "eurwar1"
+},
+{
+"sci": "hypolais hipolais",
+"common": "",
+"code": "ictwar1"
+},
+{
+"sci": "sylvia communis",
+"common": "",
+"code": "grewhi1"
+},
+{
+"sci": "parus atricapillus",
+"common": "",
+"code": "wiltit1"
+},
+{
+"sci": "parus cinctus",
+"common": "",
+"code": "gyhchi"
+},
+{
+"sci": "alcedo ispida",
+"common": "",
+"code": "comkin1"
+},
+{
+"sci": "sula bassana",
+"common": "",
+"code": "norgan"
+},
+{
+"sci": "squatarola squatarola",
+"common": "",
+"code": "bkbplo"
+},
+{
+"sci": "carduelis cannabina",
+"common": "",
+"code": "eurlin1"
+},
+{
+"sci": "carduelis chloris",
+"common": "",
+"code": "eurgre1"
+},
+{
+"sci": "carduelis flammea",
+"common": "",
+"code": "redpol1"
+},
+{
+"sci": "carduelis flavirostris",
+"common": "",
+"code": "twite1"
+},
+{
+"sci": "carduelis spinus",
+"common": "",
+"code": "eursis"
+},
+{
+"sci": "falco aesalon",
+"common": "",
+"code": "merlin"
+},
+{
+"sci": "sylvia curruca",
+"common": "",
+"code": "leswhi4"
+},
+{
+"sci": "",
+"common": "ampelis garrulus",
+"code": "bohwax"
+},
+{
+"sci": "",
+"common": "hydrochelidon nigra",
+"code": "blkter"
+},
+{
+"sci": "",
+"common": "eniconetta stelleri",
+"code": "steeid"
+},
+{
+"sci": "",
+"common": "harelda hyemalis",
+"code": "lotduc"
+},
+{
+"sci": "",
+"common": "miliaria calandra",
+"code": "corbun1"
+},
+{
+"sci": "long tailed tit",
+"common": "aegithalus caudatus",
+"code": "lottit1"
+},
+{
+"sci": "anas",
+"common": "nettion crecca",
+"code": "gnwtea"
 }
 ]

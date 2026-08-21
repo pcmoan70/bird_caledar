@@ -28,6 +28,11 @@ OUT_DIR = os.path.join(ROOT, "docs", "plates")
 ALIASES = os.path.join(HERE, "plate_aliases.json")
 MULTI = os.path.join(HERE, "plate_multi.json")
 
+BOOKS = ("gould", "dresser", "vonwright")
+# Books whose plates are local files (fetched from Wikimedia Commons by
+# fetch_vonwright.py) rather than Internet Archive page scans.
+LOCAL_BOOKS = {"vonwright"}
+
 
 # eBird common-name qualifiers; stripping them lets a plate's old short name
 # ("Kestrel", "Blackbird") reach the modern eBird name ("Eurasian Kestrel").
@@ -121,7 +126,7 @@ def match(plate, sci2code, com2code, strip2code, compact2code, sci_keys,
     g2 = " ".join(sci.split()[:2]) if sci else ""
     # Verified synonym/archaic-name overrides win outright.
     if aliases:
-        a = aliases.get((sci, com))
+        a = aliases.get((sci, com)) or (sci and aliases.get((sci, "")))
         if a:
             return a, "alias"
     # Exact matches first (most reliable), then fuzzy. A confident exact common
@@ -199,23 +204,87 @@ def _autocrop(rgba, thr=55, keep=0.995, pad=0.04):
     return rgba.crop(box)
 
 
+def _trim_page_edges(rgb, drop=8, max_depth=0.15):
+    """Full-page scans (rawpixel's von Wright folio) darken towards the page
+    edges; clean_plate would keep that shading as content. Peel rows/columns
+    whose median luminance sits below the paper level until the first clean
+    line. Only for full pages — a bird can fill a row of a tight crop."""
+    import numpy as np
+    lum = np.asarray(rgb).astype(np.float32).mean(2)
+    h, w = lum.shape
+    paper = float(np.median(lum))
+
+    def depth(meds, n):
+        d = 0
+        while d < int(n * max_depth) and meds[d] < paper - drop:
+            d += 1
+        return d
+    rm, cm = np.median(lum, axis=1), np.median(lum, axis=0)
+    t, b, l, r = depth(rm, h), depth(rm[::-1], h), depth(cm, w), depth(cm[::-1], w)
+    return rgb.crop((l, t, w - r, h - b))
+
+
+def _strip_footer(rgba, gap=0.015, thr=40):
+    """Drop the caption and printer's line set below the illustration (von
+    Wright folio plates): split the page into horizontal runs of content
+    separated by blank bands of at least `gap` of the height; below the
+    heaviest run, text-like runs (short, neutral ink) are cut off, anything
+    else (a separate piece of ground, a second bird) is kept."""
+    import numpy as np
+    arr = np.asarray(rgba).astype(np.float32)
+    a = arr[:, :, 3]
+    h, w = a.shape
+    rows = (a > thr).sum(axis=1) >= max(3, w * 0.004)   # ignore dust specks
+    min_gap = max(3, int(h * gap))
+    runs, y = [], 0
+    while y < h:
+        if rows[y]:
+            y0 = y
+            while y < h and rows[y]:
+                y += 1
+            if runs and y0 - runs[-1][1] < min_gap:
+                runs[-1] = (runs[-1][0], y)
+            else:
+                runs.append((y0, y))
+        else:
+            y += 1
+    if len(runs) < 2:
+        return rgba
+    k = max(range(len(runs)), key=lambda i: a[runs[i][0]:runs[i][1]].sum())
+    cut = runs[k][1]
+    for y0, y1 in runs[k + 1:]:
+        rgb = arr[y0:y1, :, :3][a[y0:y1] > thr]
+        chroma = (rgb.max(1) - rgb.min(1)).mean()      # black ink: ~5; paint: 30+
+        if not (y1 - y0 < 0.08 * h and chroma < 24):   # not text: keep it
+            cut = y1
+    return rgba.crop((0, 0, w, cut))
+
+
 def _regen_plate(task):
-    """Worker: rebuild one web plate from the local IA cache WITHOUT the white
-    label panel (re-clean, re-orient, paper->transparent only), detect facing,
-    downscale and palette-quantize. Returns (code, book, facing) or ('ERR',...)."""
+    """Worker: rebuild one web plate WITHOUT the white label panel (re-clean,
+    re-orient, paper->transparent only), detect facing, downscale and
+    palette-quantize. IA books come from the local page cache; LOCAL_BOOKS
+    from the file under book_plates/. Returns (code, book, facing) or ('ERR',...)."""
     code, book, identifier, leaf, max_edge = task
     try:
         import extract_book_plates as EX
         from PIL import Image
-        full = EX.fetch_image(identifier, int(leaf), PLATE_WIDTH)
-        if full is None:
-            return None
-        plate = EX.clean_plate(full)
-        if plate.width > PLATE_WIDTH:
-            plate = plate.resize((PLATE_WIDTH,
-                                  round(plate.height * PLATE_WIDTH / plate.width)))
-        plate, _b, _c, _s, _t = EX.orient_and_label(plate)
-        rgba = EX.to_transparent(plate)          # no place_label => no white panel
+        if book in LOCAL_BOOKS:
+            full = Image.open(os.path.join(PLATES, identifier)).convert("RGB")
+            if leaf:                      # a full page scan (see fetch_vonwright)
+                full = _trim_page_edges(full)
+            plate = EX.clean_plate(full)
+            rgba = _strip_footer(EX.to_transparent(plate))
+        else:
+            full = EX.fetch_image(identifier, int(leaf), PLATE_WIDTH)
+            if full is None:
+                return None
+            plate = EX.clean_plate(full)
+            if plate.width > PLATE_WIDTH:
+                plate = plate.resize((PLATE_WIDTH,
+                                      round(plate.height * PLATE_WIDTH / plate.width)))
+            plate, _b, _c, _s, _t = EX.orient_and_label(plate)
+            rgba = EX.to_transparent(plate)      # no place_label => no white panel
         rgba = _autocrop(rgba)                    # tighten page to the illustration
         rgba.thumbnail((max_edge, max_edge))
         face = _facing(rgba)
@@ -269,7 +338,12 @@ def main():
                     help="write web-sized images + docs/plates/manifest.json")
     ap.add_argument("--max-edge", type=int, default=600,
                     help="downscale longer edge for web images")
+    ap.add_argument("--books", default=",".join(BOOKS),
+                    help="comma-separated books whose web images are (re)generated "
+                         "on --emit; the other books keep their current images and "
+                         "manifest entries (default: all)")
     args = ap.parse_args()
+    regen = set(args.books.split(","))
 
     selected = {ln.split("\t")[0].strip() for ln in open(SELECTED, encoding="utf-8")
                 if ln.strip()}
@@ -284,7 +358,7 @@ def main():
     # prefer a clean single-species plate when one exists.
     by_code = {}
     stats = {}
-    for book in ("gould", "dresser"):
+    for book in BOOKS:
         rows = read_plates(book)
         hit = 0
         for r in rows:
@@ -305,36 +379,47 @@ def main():
                 by_code.setdefault(code, {}).setdefault(book, []).append(r)
         stats[book] = (len(rows), hit)
 
-    gould_codes = {c for c, v in by_code.items() if v.get("gould")}
-    dress_codes = {c for c, v in by_code.items() if v.get("dresser")}
-    either = gould_codes | dress_codes
+    covered = {b: {c for c, v in by_code.items() if v.get(b)} for b in BOOKS}
+    either = set().union(*covered.values())
     print("Matching plates -> eBird codes:")
     for book, (n, hit) in stats.items():
         print(f"  {book}: {hit}/{n} plates matched to a code")
-    print(f"\nDistinct codes covered: gould={len(gould_codes)}, "
-          f"dresser={len(dress_codes)}, either={len(either)}")
+    print("\nDistinct codes covered: " +
+          ", ".join(f"{b}={len(v)}" for b, v in covered.items()) +
+          f", any={len(either)}")
     print(f"Of the {len(selected)} app species (selected_species.txt):")
-    print(f"  with a GOULD plate:   {len(gould_codes & selected)}")
-    print(f"  with a DRESSER plate: {len(dress_codes & selected)}")
-    print(f"  with EITHER:          {len(either & selected)}")
+    for b, v in covered.items():
+        print(f"  with a {b.upper()} plate: {len(v & selected)}")
+    print(f"  with ANY:              {len(either & selected)}")
 
     if not args.emit:
         return
 
     from concurrent.futures import ProcessPoolExecutor, as_completed
     os.makedirs(OUT_DIR, exist_ok=True)
+    manifest_path = os.path.join(OUT_DIR, "manifest.json")
+    old = {}
+    if os.path.exists(manifest_path):
+        old = json.load(open(manifest_path, encoding="utf-8"))
     # Pick the best plate per code per book and build the regeneration task list.
     manifest, tasks = {}, []
     for code, books in by_code.items():
         entry = {}
-        for book in ("gould", "dresser"):
+        for book in BOOKS:
+            if book not in regen:        # keep the existing image + entry as is
+                if old.get(code, {}).get(book):
+                    entry[book] = old[code][book]
+                continue
             rows = books.get(book)
             if not rows:
                 continue
-            # prefer a single-species plate; then the most vivid/complete one
+            # prefer a single-species plate; then an adult/male (low `priority`,
+            # see fetch_vonwright.py); then the most vivid/complete one
             best = min(rows, key=lambda r: (int(r.get("_nspecies", 1)),
+                                            int(r.get("priority") or 0),
                                             -float(r.get("colorfulness") or 0)))
-            if not (best.get("identifier") and str(best.get("leaf"))):
+            if not best.get("identifier") or \
+                    (book not in LOCAL_BOOKS and not str(best.get("leaf"))):
                 continue
             nsp = int(best.get("_nspecies", 1))
             entry[book] = {
@@ -346,7 +431,8 @@ def main():
             }
             if nsp > 1:
                 entry[book]["multi"] = True   # plate also shows other species
-            tasks.append((code, book, best["identifier"], best["leaf"], args.max_edge))
+            src = best["file"] if book in LOCAL_BOOKS else best["identifier"]
+            tasks.append((code, book, src, best["leaf"], args.max_edge))
         if entry:
             manifest[code] = entry
 
@@ -365,7 +451,7 @@ def main():
 
     # Attach facing; drop any book entry whose image failed to regenerate.
     for code in list(manifest):
-        for book in ("gould", "dresser"):
+        for book in regen:
             if book not in manifest[code]:
                 continue
             f = faces.get((code, book))
@@ -383,7 +469,7 @@ def main():
         manifest[code]["sci"] = info.get(code, {}).get("sci", "")
         manifest[code]["names"] = info.get(code, {}).get("names", {})
 
-    with open(os.path.join(OUT_DIR, "manifest.json"), "w", encoding="utf-8") as f:
+    with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(manifest, f, ensure_ascii=False, separators=(",", ":"))
     print(f"\nEmitted {len(manifest)} species images under {OUT_DIR}"
           f" ({len(faces)} plate images, {len(errs)} errors)")

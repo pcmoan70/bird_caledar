@@ -43,7 +43,11 @@
   var BOOK_INFO = {
     gould: "John Gould, The Birds of Europe",
     dresser: "H. E. Dresser, A History of the Birds of Europe",
+    vonwright: "M. & W. von Wright, Svenska fåglar",
   };
+  // Book sources in default preference order; short labels for the detail view.
+  var BOOKS = ["gould", "dresser", "vonwright"];
+  var BOOK_LABEL = { gould: "Gould", dresser: "Dresser", vonwright: "von Wright" };
 
   var S = {
     labels: [], codeToIdx: {}, nSpecies: 0,
@@ -228,7 +232,7 @@
 
   // Pick the image to show for a species given the chosen source.
   //  - "ai": the generated stance cutout (flippable to face centre).
-  //  - "gould"/"dresser": the public-domain book plate; the chosen book is
+  //  - a book in BOOKS: the public-domain book plate; the chosen book is
   //    preferred, the other is the fallback, and species with no plate fall
   //    back to the AI cutout so the page stays full. Plates carry their own
   //    labels, so they are never flipped.
@@ -244,7 +248,7 @@
     if (S.src === "ai") return ai();
     var p = S.plates[code];
     if (p) {
-      var order = S.src === "dresser" ? ["dresser", "gould"] : ["gould", "dresser"];
+      var order = [S.src].concat(BOOKS.filter(function (b) { return b !== S.src; }));
       // Prefer a single-species plate (from either book, in source order); only
       // fall back to a multi-species plate — which shows the whole plate, other
       // species included — when no clean single one exists for this species.
@@ -475,18 +479,18 @@
   }
 
   // Full-screen detail view for a clicked bird. The image cycles through the
-  // available sources (Gould, Dresser, AI) when clicked; a book source links
+  // available sources (Gould, Dresser, von Wright, AI) when clicked; a book source links
   // straight to the scanned page.
   var BIRD = { code: null, variants: [], idx: 0 };
 
   function birdVariants(code) {
     var out = [];
     var p = S.plates[code] || {};
-    ["gould", "dresser"].forEach(function (b) {
+    BOOKS.forEach(function (b) {
       var e = p[b];
       if (!e) return;
       out.push({
-        label: b === "gould" ? "Gould" : "Dresser",
+        label: BOOK_LABEL[b],
         src: e.img, page: e.page_url || null, ai: false,
         origin: (BOOK_INFO[b] || b) + (e.volume ? ", " + e.volume : "") +
           (e.multi ? " — plate shows several species" : ""),

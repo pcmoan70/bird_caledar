@@ -210,3 +210,28 @@ the description-based approach the user chose is deterministic and editable.
       return clean when new candidates arrive. "Show resolved (N)" bar toggle
       reveals them to undo. Picks stay visible (can still mark Satisfied).
 - [x] Restarted worker so the remaining batch writes `gen` and uses the clause.
+
+## von Wright — Svenska fåglar plates (Wikimedia Commons)
+Source: Category:Svenska_fåglar_(von_Wright) — 411 files: 340 hi-res rawpixel
+scans of the 1929 folio (tagged CC BY-SA 4.0; species in the description) and
+71 PD files of the original lithographs, pre-cropped (binomial in filename).
+- [x] `scripts/fetch_vonwright.py`: list category via API, parse species from
+      description/filename (strip male/female/young markers -> `priority`),
+      download 1200px renditions to `book_plates/vonwright/`, write `index.csv`
+      in the Gould/Dresser schema (+ `priority`, `license`).
+- [x] `match_plates.py`: generic BOOKS list; sci-only alias fallback for old
+      binomials; local-file regen path (clean -> transparent -> strip caption
+      footer -> autocrop -> face -> vignette); prefer adult/male plate.
+- [x] `plate_aliases.json` / `plate_multi.json`: von Wright's 1920s names
+      (Nyroca, Oidemia, Harelda, Colymbus, Cypselus...) and multi-species plates.
+- [x] App: third "von Wright" source button, BOOK_INFO, detail-view variant,
+      help text + attribution (CC BY-SA for the rawpixel scans).
+- [x] Re-emit `docs/plates/`, verify coverage numbers and spot-check images.
+
+Review: 410 of the 411 Commons files parsed (1 hybrid skipped); 248 app species
+now have a von Wright plate (15 of them had no plate before) -> plate coverage
+413 -> 428 of 522. Gould/Dresser manifest entries and PNGs untouched
+(`--books vonwright`). Known limits: white birds (swans, Ivory/Iceland Gull)
+go ghostly on dark grounds in all three books (paper->transparent); a caption
+survives when it touches the bird (magpie). Re-run:
+`python fetch_vonwright.py && python match_plates.py --emit --books vonwright`.

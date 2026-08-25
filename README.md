@@ -137,6 +137,7 @@ scripts/
   field_notes_style.md     the house style the notes are written to
   merge_field_notes.py     validate drafts (invented numbers, wrong candidates) -> field_notes.json
   build_field_id_web.py    slim web cut -> docs/field_id.json
+  build_missing.py         species with no image at all -> docs/missing.json
   apply_field_id_edits.py  fold edits exported from the app back into the dataset
   distill_field_id.py      prompt-shaped field marks -> id_features_sourced.json
 ```

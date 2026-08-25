@@ -65,9 +65,13 @@ def set_live(code, vid):
 
 
 def main():
-    if len(sys.argv) < 2:
-        sys.exit("usage: apply_choices.py choices.json")
-    choices = json.load(open(sys.argv[1], encoding="utf-8"))
+    args = [a for a in sys.argv[1:] if not a.startswith("-")]
+    # Applying commits docs/ and pushes; --dry-run reports what it would do and
+    # writes nothing (no queue, no manifest, no git), so the flow can be tested.
+    dry = "--dry-run" in sys.argv or "-n" in sys.argv
+    if not args:
+        sys.exit("usage: apply_choices.py [--dry-run] choices.json")
+    choices = json.load(open(args[0], encoding="utf-8"))
     review = json.load(open(REVIEW_MAN, encoding="utf-8")) if os.path.exists(REVIEW_MAN) else {"species": {}}
     review.setdefault("species", {})
     retry = json.load(open(RETRY, encoding="utf-8")) if os.path.exists(RETRY) else {}
@@ -75,7 +79,7 @@ def main():
     applied = json.load(open(APPLIED, encoding="utf-8")) if os.path.exists(APPLIED) else {}
     jobs = Q.load()
 
-    finalized = kept = queued = unchanged = 0
+    finalized = kept = queued = unchanged = requested = 0
     id_changed = []
     feedback = {"badRef": [], "satisfied": [], "notgood": [], "notes": {}}
 
@@ -83,6 +87,14 @@ def main():
         # choices.json values are objects: {choice?, verdict?, badRef?, id?, note?}
         # (older plain-string picks are treated as a bare choice).
         is_obj = isinstance(val, dict)
+        # A species with no images at all can't be reviewed — the review page
+        # only lets you ask for images, which arrives as {"request": true}.
+        if is_obj and val.get("request"):
+            jobs = Q.enqueue(jobs, code, "coverage", n_new=3, priority=Q.FEEDBACK,
+                             reason="requested from the app (no images yet)")
+            requested += 1
+            print(f"  {code}: no images -> queued a first-time generation")
+            continue
         choice = val.get("choice") if is_obj else val          # "live"/"input"/"vN"/None
         verdict = val.get("verdict") if is_obj else None        # "satisfied"/"notgood"/None
         badref = bool(is_obj and val.get("badRef"))
@@ -178,6 +190,11 @@ def main():
 
     # Publish the queued codes so the review page hides anything awaiting (re)gen.
     review["queued"] = Q.job_codes(jobs)
+    if dry:
+        print(f"\n[dry run] would finalize {finalized} · keep {kept} live · queue "
+              f"{queued} gen jobs · {requested} first-time requests · "
+              f"{unchanged} unchanged. Nothing written, nothing committed.")
+        return
     json.dump(review, open(REVIEW_MAN, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     json.dump(retry, open(RETRY, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     json.dump(applied, open(APPLIED, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
@@ -186,7 +203,7 @@ def main():
         json.dump(idfeat, open(IDFEATURES, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         print(f"updated id_features.json for {len(id_changed)}: " + ", ".join(id_changed))
     print(f"\nfinalized {finalized} · kept {kept} champions live · queued {queued} gen "
-          f"jobs · {unchanged} unchanged (left alone)")
+          f"jobs · {requested} first-time requests · {unchanged} unchanged (left alone)")
 
     # Drop review_imgs only for finalized (reviewed) species; queued ones keep
     # their folder (champion/before tiles) until the worker refreshes them.

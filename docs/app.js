@@ -357,15 +357,16 @@
 
     if (it.missing) {                      // no image anywhere: draw a card
       el.className += " missing";
-      var ph = document.createElement("button");
-      ph.type = "button";
+      var ph = document.createElement("div");
       ph.className = "ph";
-      ph.title = "No image yet for " + nameFor(it.code).common +
-                 " — click to add one";
+      ph.title = "No image yet for " + nameFor(it.code).common;
       ph.innerHTML = '<span class="ph-glyph" aria-hidden="true">🪶</span>' +
-        '<span class="ph-name"></span><span class="ph-add">+ add images</span>';
+        '<span class="ph-name"></span>' +
+        '<button type="button" class="ph-add">+ add images</button>';
       ph.querySelector(".ph-name").textContent = nameFor(it.code).common;
-      ph.onclick = function (e) {
+      // The card opens the species like any other bird; only this button leaves
+      // for the image tool.
+      ph.querySelector(".ph-add").onclick = function (e) {
         e.stopPropagation();
         openReview(it.code);
       };

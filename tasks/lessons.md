@@ -45,3 +45,17 @@ resulting file still compiles, so nothing fails loudly.
 escapes — never `sed`/heredoc string surgery. If a filter "cannot" be failing,
 dump the raw bytes (`od -c`, `open(...,'rb')`) before re-reasoning about logic.
 Also: `python -B` / clear `__pycache__` when a module seems stale.
+
+## Test scripts that publish (2026-08-25)
+**Mistake:** Ran `apply_choices.py` on a throwaway choices.json to check a new
+code path. That script ends by running `git add docs`, committing and pushing —
+so it published my half-finished working tree under the message "Apply review
+feedback", and pushed it to origin.
+
+**Why:** Pipeline scripts in this repo are end-to-end: they apply state AND
+publish. Nothing about the invocation says so.
+
+**How to apply:** Before running any repo script as a test, grep it for `git`,
+`push`, `subprocess` and for writes to tracked paths. Prefer a `--dry-run`
+(apply_choices.py now has one, `-n`); otherwise run it on a scratch copy. If a
+script does publish, either finish and stage deliberately first, or stash.

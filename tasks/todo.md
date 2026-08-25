@@ -330,3 +330,22 @@ than with geese (28 species re-drafted).
 Notes feed both the app (docs/field_id.json, still editable) and the image
 prompts (`distill_field_id.py` now takes the plumage + bare-parts lines: 522
 clauses, all from notes).
+
+## Placeholder for species with no image + request path (2026-08-25)
+- [x] `scripts/build_missing.py` -> `docs/missing.json`: app species with
+      neither a plate nor an AI cutout (today: Chukar), with localized names.
+- [x] App: those species now appear as a dashed placeholder card (feather glyph,
+      name, "+ add images"); the card opens the detail view (field notes still
+      shown), the button opens the image tool.
+- [x] review.html: `?add=<code>&name=&sci=` shows a "Species with no images yet"
+      panel with Request images / remove; requests live in localStorage and are
+      included in the exported choices.json as `{"request": true}`.
+- [x] `apply_choices.py`: a request queues a first-time `coverage` job at
+      feedback priority; added `--dry-run` (writes nothing, no git) — the script
+      commits and pushes docs/, which is a trap when testing.
+
+Review: verified end to end in a headless browser — placeholder renders in the
+layout, opens the species (notes intact), the button deep-links to the tool, the
+request survives a reload, the export carries it, and a dry-run apply queues the
+coverage job. Re-run `build_missing.py` after cutout/match_plates/apply_choices
+so the placeholder disappears once images land.

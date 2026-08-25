@@ -395,3 +395,20 @@ scripts/sources/whobird.py states they must never be. They are not shown by the
 app any more, but they are still in the repo and on Pages. Purging them (and
 having the review page hotlink the CDN instead, as 247 species already do) is
 the fix; it deletes tracked files, so it needs a decision.
+
+## Photos grid tidy-up (2026-08-25)
+- [x] Switching source starts the grid at the top (it kept the scatter's scroll
+      position, so the grid opened mid-page).
+- [x] One-line caption: "Great Tit" over "© Name · CC BY NC"; the full
+      attribution moved to the tile's tooltip. Long iNaturalist attribution
+      strings were wrapping to three lines and swamping the tile.
+- [x] Photos are looked up only as a tile scrolls into view (IntersectionObserver,
+      400px margin), paced to iNaturalist's ~1/sec guidance (2 in flight, 900ms
+      apart). Asking for all 285-448 species at once was tripping the rate limit,
+      which showed up as "no photo" on most tiles.
+- [x] A failed or throttled lookup is retried (2x, backing off) instead of being
+      cached as "no photo"; only a real empty answer marks the tile. Results are
+      cached in localStorage, so a revisited grid fills instantly.
+- [x] Kept the plain research-grade sample rather than `order_by=votes`: the
+      most-faved photos are aberrant or arty (a leucistic Mallard, a feather
+      macro, a murmuration) — the same bias scripts/sources/inat.py warns about.

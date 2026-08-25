@@ -304,8 +304,16 @@ select { border: 1px solid #cfc8b6; border-radius: 8px; padding: 5px 8px; color:
 .gname {
   font-family: "Playfair Display", "Iowan Old Style", Georgia, serif;
   font-size: 14px; text-shadow: 0 1px 5px rgba(0,0,0,0.9);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.gcredit { font-size: 10px; letter-spacing: 0.04em; color: rgba(255,255,255,0.8); }
+/* One line, ellipsised: the full credit is in the tile's tooltip. */
+.gcredit {
+  font-size: 10px; letter-spacing: 0.04em; color: rgba(255,255,255,0.82);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .gcard.nophoto { background: rgba(0,0,0,0.03); border: 1px dashed #bdb49f; }
 .gcard.nophoto figcaption { background: none; color: var(--muted); }
 .gcard.nophoto .gname { text-shadow: none; }
+/* A tile waiting for its photo: a quiet pulse, not an empty dashed box. */
+.gcard.loading { background: rgba(0,0,0,0.05); animation: gpulse 1.4s ease-in-out infinite; }
+@keyframes gpulse { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }

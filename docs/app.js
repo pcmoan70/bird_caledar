@@ -353,15 +353,25 @@
 
   // The curated Macaulay asset for a species — used ONLY to pass a seed to the
   // local generation pipeline and to link to the catalogue. Never rendered.
-  // The photographer and licence, as the licence requires. iNaturalist's own
-  // attribution string already carries both ("(c) Name, some rights reserved
-  // (CC BY-NC)"), so use it verbatim where it exists.
+  // A one-line credit for the tile: "© Name · CC BY-NC". iNaturalist's own
+  // attribution string ("(c) Name, some rights reserved (CC BY-NC)") is long
+  // enough to swamp a small card, so it is trimmed here and kept in full in the
+  // tile's tooltip (see fullCredit).
   function creditLine(rec) {
-    if (rec.by) return rec.by.replace(/^\(c\)\s*/i, "© ");
+    var who = (rec.by || "").replace(/^\(c\)\s*/i, "")
+      .replace(/,?\s*(some|no|all) rights reserved.*$/i, "").trim();
+    var lic = (rec.license || "").toUpperCase().replace(/-/g, " ");
     var bits = [];
-    if (rec.license) bits.push(rec.license.toUpperCase());
-    if (rec.credit) bits.push(rec.credit);
-    return bits.join(" · ") || "iNaturalist";
+    if (who) bits.push("© " + who);
+    if (lic) bits.push(lic);
+    if (!bits.length) bits.push(rec.credit || "iNaturalist");
+    return bits.join(" · ");
+  }
+
+  function fullCredit(rec) {
+    return (rec.by || rec.credit || "iNaturalist") +
+      (rec.license && (rec.by || "").indexOf(rec.license) < 0
+        ? " (" + rec.license.toUpperCase() + ")" : "");
   }
 
   function mlAsset(code) {
@@ -371,8 +381,25 @@
       seed: ML_CDN + aid + "/900" };
   }
 
-  var REF_CACHE = {};                 // code -> {url, by, license, page, src} | null
-  var _refQueue = [], _refBusy = 0, REF_PARALLEL = 3;
+  // code -> {url, by, license, page, src} | null. Kept for the tab as well, so
+  // flipping between sources or locations doesn't ask iNaturalist again.
+  // Kept across visits, not just the tab: every species costs one lookup ever,
+  // so a grid you have seen before fills instantly and iNaturalist is spared.
+  var REF_CACHE = (function () {
+    try { return JSON.parse(localStorage.getItem("bc_refs") || "{}"); }
+    catch (e) { return {}; }
+  })();
+  var _refSaveTimer = null;
+  function saveRefCache() {
+    clearTimeout(_refSaveTimer);
+    _refSaveTimer = setTimeout(function () {
+      try { localStorage.setItem("bc_refs", JSON.stringify(REF_CACHE)); }
+      catch (e) {}
+    }, 500);
+  }
+  // iNaturalist asks for about one request a second, 100/min at the very most.
+  // Going wider gets everything throttled, which reads on screen as "no photo".
+  var _refQueue = [], _refBusy = 0, REF_PARALLEL = 2, REF_GAP = 900, _refLast = 0;
 
   function refPhoto(code, cb) {
     if (REF_CACHE[code] !== undefined) { cb(REF_CACHE[code]); return; }
@@ -392,11 +419,15 @@
   }
 
   function pumpRefQueue() {
-    while (_refBusy < REF_PARALLEL && _refQueue.length) {
+    if (_refBusy >= REF_PARALLEL || !_refQueue.length) return;
+    var wait = Math.max(0, REF_GAP - (Date.now() - _refLast));
+    setTimeout(function () {
+      if (!_refQueue.length) return;
       var job = _refQueue.shift();
-      _refBusy++;
+      _refBusy++; _refLast = Date.now();
       fetchInat(job[0], job[1]);
-    }
+      pumpRefQueue();
+    }, wait);
   }
 
   // Only openly licensed photos: the observations endpoint is asked for these
@@ -406,24 +437,38 @@
 
   function fetchInat(code, cb) {
     var sci = nameFor(code).sci;
-    var done = function (rec) {
-      REF_CACHE[code] = rec; _refBusy--; cb(rec); pumpRefQueue();
+    // `keep` distinguishes "this species has no openly licensed photo" (cache
+    // it) from "the lookup failed / was throttled" (leave it out, so scrolling
+    // back tries again instead of showing an empty card for ever).
+    var done = function (rec, keep) {
+      if (rec || keep) { REF_CACHE[code] = rec || null; saveRefCache(); }
+      _refBusy--; cb(rec); pumpRefQueue();
     };
-    if (!sci) { done(null); return; }
+    if (!sci) { done(null, true); return; }
+    // Deliberately NOT ordered by votes: the most-faved photos skew to striking
+    // or aberrant individuals and arty crops — a leucistic Mallard, a feather
+    // macro, a starling murmuration — which is the opposite of what a bird
+    // calendar wants. A plain research-grade, wild, uncaptive sample gives
+    // typical birds, the same reasoning as scripts/sources/inat.py.
     fetch("https://api.inaturalist.org/v1/observations?per_page=1&photos=true" +
-          "&quality_grade=research&captive=false&photo_license=" + INAT_LICENSES +
+          "&quality_grade=research&captive=false" +
+          "&photo_license=" + INAT_LICENSES +
           "&taxon_name=" + encodeURIComponent(sci))
-      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (r) {
+        if (r.status === 429 || r.status >= 500) return "throttled";
+        return r.ok ? r.json() : null;
+      })
       .then(function (j) {
+        if (j === "throttled") { done(null, false); return; }
         var obs = j && j.results && j.results[0];
         var ph = obs && obs.photos && obs.photos[0];
-        if (!ph || !ph.url || !ph.license_code) { done(null); return; }
+        if (!ph || !ph.url || !ph.license_code) { done(null, !!j); return; }
         done({ url: ph.url.replace("/square.", "/medium.").replace("/small.", "/medium."),
           by: ph.attribution || "", license: ph.license_code.toUpperCase(),
           credit: "iNaturalist", src: "inat",
           page: "https://www.inaturalist.org/observations/" + (obs.id || "") });
       })
-      .catch(function () { done(null); });
+      .catch(function () { done(null, false); });   // network hiccup: retry later
   }
 
   // Stand-in for a species with no image in ANY source — the bird still belongs
@@ -446,6 +491,7 @@
     stage.innerHTML = "";
     stage.classList.add("grid");
     stage.style.height = "";
+    window.scrollTo(0, 0);      // a fresh layout starts at the top, as the scatter does
     var rows = [];
     var seen = {};
     var add = function (code) {
@@ -484,8 +530,49 @@
           page: card.dataset.page || null, stance: "sitting" });
       };
       stage.appendChild(card);
-      refPhoto(it.code, function (rec) {
-        if (!rec) { card.classList.add("nophoto"); cap.querySelector(".gcredit").textContent = "no photo"; return; }
+      // Look the photo up only when the tile comes into view: a location can
+      // have 450 species, and asking for all of them at once would both waste
+      // the requests and trip iNaturalist's rate limit.
+      whenVisible(card, function () { fillCard(it, card, im, cap); });
+    });
+    setStatus(rows.length);
+  }
+
+  var _seeObserver = null;
+  function whenVisible(el, fn) {
+    if (!window.IntersectionObserver) { fn(); return; }
+    if (!_seeObserver) {
+      _seeObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (!e.isIntersecting) return;
+          _seeObserver.unobserve(e.target);
+          var cb = e.target._onSee;
+          if (cb) { e.target._onSee = null; cb(); }
+        });
+      }, { rootMargin: "400px" });
+    }
+    el._onSee = fn;
+    _seeObserver.observe(el);
+  }
+
+  function fillCard(it, card, im, cap, tries) {
+    var nm = nameFor(it.code);
+    card.classList.add("loading");
+    refPhoto(it.code, function (rec) {
+        card.classList.remove("loading");
+        if (!rec) {
+          // Only call it empty once the lookup actually answered "nothing" —
+          // a throttled or failed request leaves the species uncached, so try
+          // again shortly rather than branding the tile.
+          if (REF_CACHE[it.code] === undefined && (tries || 0) < 2) {
+            setTimeout(function () { fillCard(it, card, im, cap, (tries || 0) + 1); },
+                       1500 * ((tries || 0) + 1));
+            return;
+          }
+          card.classList.add("nophoto");
+          cap.querySelector(".gcredit").textContent = "no photo";
+          return;
+        }
         im.src = rec.url;
         // A stored thumbnail can go missing (they are pruned as species are
         // finalised) — fall back to a live lookup instead of a broken tile.
@@ -497,6 +584,7 @@
             if (r2 && r2.url) {
               im.src = r2.url;
               cap.querySelector(".gcredit").textContent = creditLine(r2);
+              card.title = nm.common + "\nPhoto: " + fullCredit(r2);
             } else {
               card.classList.add("nophoto");
               cap.querySelector(".gcredit").textContent = "no photo";
@@ -507,9 +595,9 @@
           (rec.by ? " — " + rec.by : "");
         if (rec.page) card.dataset.page = rec.page;
         cap.querySelector(".gcredit").textContent = creditLine(rec);
-      });
+        card.title = nm.common + (nm.sci ? " — " + nm.sci : "") +
+          "\nPhoto: " + fullCredit(rec);
     });
-    setStatus(rows.length);
   }
 
   function render() {

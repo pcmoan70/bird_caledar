@@ -368,3 +368,30 @@ so the placeholder disappears once images land.
       under docs/review_imgs/, 64 pruned ones skipped). `#stage.grid` renders an
       even gallery instead of the scatter, credited per tile, click opens the
       species. A tile whose stored thumbnail 404s re-looks-up live.
+
+## Copyright split: CC photos on screen, Macaulay only as a seed (2026-08-25)
+- [x] The app displays **openly licensed photos only**. `build_photos.py` keeps
+      just the Wikimedia / iNaturalist / GBIF references (with licence and
+      photographer); everything else is looked up live from iNaturalist's
+      observations endpoint with an explicit `photo_license` filter, so an
+      all-rights-reserved photo is never returned (a taxon's default photo can
+      be one — that is why it isn't used).
+- [x] Macaulay Library is never rendered: `build_ml_assets.py` writes
+      docs/ml_assets.json (6,378 codes -> asset id) purely so "+ add images" can
+      hand the asset to the local pipeline and the app can link to the
+      catalogue. Verified in the browser: no request ever reaches Cornell.
+- [x] "+ add images" is now one click — the app records the request (same
+      localStorage the review tool reads) with the seed, opens the tool with the
+      species already ticked, and the export carries `seed_asset`.
+- [x] `apply_choices.py` `fetch_seeds()`: downloads the curated whoBIRD asset
+      (plus a couple more from the Macaulay search when it is reachable) into
+      scripts/ml_seeds/<code>/ (gitignored), pins the best as the img2img
+      reference, and queues the coverage job — the normal generation/feedback
+      flow.
+
+**Outstanding — pre-existing:** `docs/review_imgs/*/ref.jpg` contains **178
+Macaulay-sourced thumbnails that are committed and published**, though
+scripts/sources/whobird.py states they must never be. They are not shown by the
+app any more, but they are still in the repo and on Pages. Purging them (and
+having the review page hotlink the CDN instead, as 247 species already do) is
+the fix; it deletes tracked files, so it needs a decision.

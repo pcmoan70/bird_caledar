@@ -64,6 +64,66 @@ def set_live(code, vid):
     return True
 
 
+SEEDS = os.path.join(HERE, "ml_seeds")   # local reference photos (gitignored)
+
+
+def fetch_seeds(code, val, dry=False):
+    """Download the reference photo(s) a requested species should be generated
+    from, and pin the best one so the worker uses it.
+
+    The app sends the curated Macaulay asset id when the species has one; a
+    couple more are pulled from the Macaulay search when it is reachable. These
+    photos are copyright their photographers: they live in scripts/ml_seeds/ and
+    scripts/pinned_refs/ (both gitignored), are used only as the img2img input,
+    and are never published — the artwork the app shows is the generated plate.
+    Falls back to the CC photo the app displayed when there is no Macaulay id.
+    """
+    import regen_flagged as R
+
+    urls = []
+    aid = str(val.get("seed_asset") or "")
+    if aid:
+        urls.append(("macaulay:" + aid,
+                     f"https://cdn.download.ams.birds.cornell.edu/api/v2/asset/{aid}/1200"))
+        try:                                   # a couple more, when reachable
+            from sources import macaulay
+            for c in macaulay.search(code, limit=3, size=1200):
+                if c.src_id and c.src_id != aid and len(urls) < 3:
+                    urls.append(("macaulay:" + c.src_id, c.url))
+        except Exception as e:                 # noqa: BLE001
+            print(f"    (macaulay search unavailable: {e})")
+    elif val.get("seed"):
+        urls.append(((val.get("seed_src") or "photo"), val["seed"]))
+    if not urls:
+        return 0        # nothing given: the worker picks a reference itself
+
+    if dry:
+        return len(urls)
+    d = os.path.join(SEEDS, code)
+    os.makedirs(d, exist_ok=True)
+    from sources.base import Candidate
+    saved = []
+    for i, (tag, url) in enumerate(urls):
+        dest = os.path.join(d, f"seed_{i}.jpg")
+        src, _, sid = tag.partition(":")
+        cand = Candidate(url=url, pose="sitting",
+                         source="whobird" if src == "macaulay" else src,
+                         license="Macaulay Library (reference only)"
+                                 if src == "macaulay" else "",
+                         src_id=sid or str(i))
+        try:
+            # _fetch_candidate caches Macaulay assets by id and rate-limits the
+            # CDN, so a repeat request costs Cornell nothing.
+            if R._fetch_candidate(cand, dest):
+                saved.append(dest)
+        except Exception as e:                 # noqa: BLE001
+            print(f"    seed {tag} failed: {e}")
+    if saved:
+        os.makedirs(R.PINNED, exist_ok=True)
+        shutil.copy(saved[0], os.path.join(R.PINNED, f"{code}.jpg"))
+    return len(saved)
+
+
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("-")]
     # Applying commits docs/ and pushes; --dry-run reports what it would do and
@@ -90,10 +150,12 @@ def main():
         # A species with no images at all can't be reviewed — the review page
         # only lets you ask for images, which arrives as {"request": true}.
         if is_obj and val.get("request"):
+            seeds = fetch_seeds(code, val, dry)
             jobs = Q.enqueue(jobs, code, "coverage", n_new=3, priority=Q.FEEDBACK,
                              reason="requested from the app (no images yet)")
             requested += 1
-            print(f"  {code}: no images -> queued a first-time generation")
+            print(f"  {code}: no images -> {seeds} reference photo(s) fetched, "
+                  f"queued a first-time generation")
             continue
         choice = val.get("choice") if is_obj else val          # "live"/"input"/"vN"/None
         verdict = val.get("verdict") if is_obj else None        # "satisfied"/"notgood"/None

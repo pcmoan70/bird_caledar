@@ -61,7 +61,7 @@
   var S = {
     labels: [], codeToIdx: {}, nSpecies: 0,
     tax: {}, langs: [], lang: "en",
-    manifest: {}, plates: {}, missing: {}, aves: null, photos: null, probs: {},
+    manifest: {}, plates: {}, missing: {}, aves: null, photos: null, ml: null, probs: {},
     fieldId: null,                         // field_id.json, fetched on first detail view
     lat: DEFAULT.lat, lon: DEFAULT.lon, week: 1, mode: "A", src: "gould",
     aiBW: false,
@@ -203,14 +203,29 @@
     var url = "review.html#" + encodeURIComponent(code);
     if (!S.manifest[code] && !S.plates[code]) {
       var nm = nameFor(code);
-      var ref = REF_CACHE[code];
+      var shown = REF_CACHE[code];        // the CC photo on the card, if any
+      var ml = mlAsset(code);             // the curated Macaulay seed, if any
+      // One click is the whole request: record it here (the review tool reads
+      // the same store) so that page opens with the species already ticked and
+      // only the export is left to do. The seed the generator should start from
+      // travels with it — the Macaulay asset when there is one (it is the best
+      // reference and stays local to the pipeline), else the CC photo shown.
+      try {
+        var rq = JSON.parse(localStorage.getItem("birdReviewRequests") || "{}");
+        rq[code] = { name: nm.common, sci: nm.sci || "", requested: true,
+          ts: new Date().toISOString(),
+          seed_asset: ml ? ml.id : "",
+          seed: !ml && shown && shown.url ? shown.url : "",
+          seed_src: ml ? "macaulay" : (shown ? shown.src || "" : "") };
+        localStorage.setItem("birdReviewRequests", JSON.stringify(rq));
+      } catch (e) {}
       url = "review.html?add=" + encodeURIComponent(code) +
         "&name=" + encodeURIComponent(nm.common) +
         "&sci=" + encodeURIComponent(nm.sci || "");
-      if (ref && ref.url) {                 // hand the photo over as the seed
-        url += "&seed=" + encodeURIComponent(ref.url) +
-          "&seedsrc=" + encodeURIComponent(ref.src || "") +
-          "&seedby=" + encodeURIComponent(ref.by || "");
+      if (ml) url += "&seedasset=" + encodeURIComponent(ml.id);
+      else if (shown && shown.url) {
+        url += "&seed=" + encodeURIComponent(shown.url) +
+          "&seedsrc=" + encodeURIComponent(shown.src || "");
       }
     }
     window.open(url, "_blank", "noopener");
@@ -310,28 +325,50 @@
     return ai();   // no plate for this species: fall back to an AI image
   }
 
-  // ---- Reference photos for placeholders --------------------------------
-  // A placeholder shows a real photograph of the bird, and that same photo is
-  // handed to the image tool as the generation seed (the pipeline draws its
-  // plates img2img from a reference photo).
+  // ---- Reference photos ---------------------------------------------------
+  // Photographs shown by the app — in a placeholder card and in the Photos grid
+  // — must be ones we are allowed to show: photos.json carries the Wikimedia /
+  // iNaturalist / GBIF references (CC or public domain, with the licence and
+  // photographer), and anything else is looked up live from iNaturalist, whose
+  // API is CORS-open and whose photos are CC-licensed.
   //
-  // Where the photo comes from: for the curated set, missing.json may carry
-  // Macaulay Library assets resolved offline (scripts/build_missing.py) — those
-  // are hotlinked from Cornell's CDN and credited, never republished. For every
-  // other bird the lookup has to happen in the browser, and Macaulay's search
-  // API allows neither cross-origin reads nor scripted clients, so iNaturalist
-  // is used: it is CORS-open and its photos are CC-licensed, i.e. actually
-  // displayable, and it is already one of the pipeline's own reference sources.
+  // Macaulay Library photos are deliberately NOT displayed: they are copyright
+  // their photographers, all rights reserved. The app links out to the
+  // catalogue entry, and "+ add images" passes the asset id to the local
+  // generation pipeline, where the photo is a transient img2img reference that
+  // is never published — the same arrangement scripts/sources/whobird.py sets out.
   // photos.json, fetched the first time the Photos grid or a photo is needed.
   var _photosReq = null;
   function loadPhotos() {
     if (!_photosReq) {
-      _photosReq = fetch(PHOTOS_URL)
-        .then(function (r) { return r.ok ? r.json() : {}; })
-        .catch(function () { return {}; })
-        .then(function (j) { S.photos = j; return j; });
+      _photosReq = Promise.all([
+        fetch(PHOTOS_URL).then(function (r) { return r.ok ? r.json() : {}; })
+          .catch(function () { return {}; }),
+        fetch(ML_URL).then(function (r) { return r.ok ? r.json() : {}; })
+          .catch(function () { return {}; }),
+      ]).then(function (a) { S.photos = a[0]; S.ml = a[1]; return a[0]; });
     }
     return _photosReq;
+  }
+
+  // The curated Macaulay asset for a species — used ONLY to pass a seed to the
+  // local generation pipeline and to link to the catalogue. Never rendered.
+  // The photographer and licence, as the licence requires. iNaturalist's own
+  // attribution string already carries both ("(c) Name, some rights reserved
+  // (CC BY-NC)"), so use it verbatim where it exists.
+  function creditLine(rec) {
+    if (rec.by) return rec.by.replace(/^\(c\)\s*/i, "© ");
+    var bits = [];
+    if (rec.license) bits.push(rec.license.toUpperCase());
+    if (rec.credit) bits.push(rec.credit);
+    return bits.join(" · ") || "iNaturalist";
+  }
+
+  function mlAsset(code) {
+    var aid = (S.ml || {})[code];
+    if (!aid) return null;
+    return { id: aid, page: "https://macaulaylibrary.org/asset/" + aid,
+      seed: ML_CDN + aid + "/900" };
   }
 
   var REF_CACHE = {};                 // code -> {url, by, license, page, src} | null
@@ -339,18 +376,14 @@
 
   function refPhoto(code, cb) {
     if (REF_CACHE[code] !== undefined) { cb(REF_CACHE[code]); return; }
+    // The photo indexes are shared with the Photos grid; pull them in on the
+    // first placeholder that needs one.
+    if (!S.ml) { loadPhotos().then(function () { refPhoto(code, cb); }); return; }
     var known = (S.photos || {})[code];
     if (known) {
-      REF_CACHE[code] = { url: known.url, by: "", page: known.page || null,
-        license: "", src: known.credit === "Macaulay Library" ? "macaulay" : "ref",
-        credit: known.credit };
-      cb(REF_CACHE[code]);
-      return;
-    }
-    var ml = (S.missing[code] || {}).ml;
-    if (ml && ml.length) {
-      REF_CACHE[code] = { url: ml[0].url, by: ml[0].by || "", page: ml[0].page,
-        license: "Macaulay Library", src: "macaulay", id: ml[0].id };
+      REF_CACHE[code] = { url: known.url, by: known.by || "",
+        page: known.page || null, license: known.license || "",
+        credit: known.credit, src: "open" };
       cb(REF_CACHE[code]);
       return;
     }
@@ -366,22 +399,29 @@
     }
   }
 
+  // Only openly licensed photos: the observations endpoint is asked for these
+  // licences explicitly, so an all-rights-reserved photo is never returned — a
+  // taxon's "default photo" can be one, which is why it isn't used here.
+  var INAT_LICENSES = "cc0,cc-by,cc-by-nc,cc-by-sa,cc-by-nd,cc-by-nc-sa,cc-by-nc-nd";
+
   function fetchInat(code, cb) {
     var sci = nameFor(code).sci;
     var done = function (rec) {
       REF_CACHE[code] = rec; _refBusy--; cb(rec); pumpRefQueue();
     };
     if (!sci) { done(null); return; }
-    fetch("https://api.inaturalist.org/v1/taxa?rank=species&per_page=1&q=" +
-          encodeURIComponent(sci))
+    fetch("https://api.inaturalist.org/v1/observations?per_page=1&photos=true" +
+          "&quality_grade=research&captive=false&photo_license=" + INAT_LICENSES +
+          "&taxon_name=" + encodeURIComponent(sci))
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) {
-        var t = j && j.results && j.results[0];
-        var ph = t && t.default_photo;
-        if (!ph || !ph.medium_url) { done(null); return; }
-        done({ url: ph.medium_url, by: ph.attribution || "",
-          license: (ph.license_code || "").toUpperCase(), page: t.wikipedia_url ||
-            ("https://www.inaturalist.org/taxa/" + t.id), src: "inat" });
+        var obs = j && j.results && j.results[0];
+        var ph = obs && obs.photos && obs.photos[0];
+        if (!ph || !ph.url || !ph.license_code) { done(null); return; }
+        done({ url: ph.url.replace("/square.", "/medium.").replace("/small.", "/medium."),
+          by: ph.attribution || "", license: ph.license_code.toUpperCase(),
+          credit: "iNaturalist", src: "inat",
+          page: "https://www.inaturalist.org/observations/" + (obs.id || "") });
       })
       .catch(function () { done(null); });
   }
@@ -456,8 +496,7 @@
           refPhoto(it.code, function (r2) {
             if (r2 && r2.url) {
               im.src = r2.url;
-              cap.querySelector(".gcredit").textContent = r2.credit ||
-                (r2.license || "iNaturalist");
+              cap.querySelector(".gcredit").textContent = creditLine(r2);
             } else {
               card.classList.add("nophoto");
               cap.querySelector(".gcredit").textContent = "no photo";
@@ -467,8 +506,7 @@
         card.dataset.origin = (rec.credit || "Reference photograph") +
           (rec.by ? " — " + rec.by : "");
         if (rec.page) card.dataset.page = rec.page;
-        cap.querySelector(".gcredit").textContent = rec.credit ||
-          (rec.src === "macaulay" ? "Macaulay Library" : (rec.license || "iNaturalist"));
+        cap.querySelector(".gcredit").textContent = creditLine(rec);
       });
     });
     setStatus(rows.length);
@@ -566,9 +604,10 @@
         ph.insertBefore(pic, ph.firstChild);
         var cr = document.createElement("span");
         cr.className = "ph-credit";
-        cr.textContent = rec.src === "macaulay" ? "Macaulay Library"
-          : (rec.license ? rec.license.toUpperCase() : "iNaturalist");
-        cr.title = "Reference photo: " + (rec.by || rec.src);
+        cr.textContent = (rec.license || "").toUpperCase() ||
+          rec.credit || "iNaturalist";
+        cr.title = "Photo: " + (rec.by || rec.credit || "iNaturalist") +
+          (rec.license ? " (" + rec.license + ")" : "");
         ph.appendChild(cr);
       });
       el.addEventListener("mousemove", function (ev) { showTip(ev, it); });
@@ -751,6 +790,11 @@
   // One photograph per species — the reference photos the generator picked
   // (mostly Macaulay Library), shown as a grid under the "Photos" source.
   var PHOTOS_URL = "photos.json";
+  // code -> Macaulay asset id, resolved offline from the whoBIRD list
+  // (scripts/build_ml_assets.py): a curated photo for 6,378 of the model's
+  // birds, so a placeholder or a grid tile can show the bird itself.
+  var ML_URL = "ml_assets.json";
+  var ML_CDN = "https://cdn.download.ams.birds.cornell.edu/api/v2/asset/";
   var FIELDID_URL = "field_id.json";
   var DESC_KEY = "birdcal.desc.edits";
   var descEdits = {};

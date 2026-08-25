@@ -67,3 +67,7 @@ scripts/rejected_photos.json
 # scripts/field_notes.json is what the app and prompts use)
 scripts/field_notes_packs/
 scripts/field_notes_out/
+
+# Reference photos fetched for a requested species (Macaulay: all rights
+# reserved — a local img2img seed only, never published)
+scripts/ml_seeds/

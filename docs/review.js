@@ -22,6 +22,13 @@
   var addCode = qs.get("add") || "";
   var addName = qs.get("name") || addCode;
   var addSci = qs.get("sci") || "";
+  // The seed the generator should start from: a Macaulay asset id when the
+  // species has a curated one (the photo itself stays out of the browser —
+  // it is all rights reserved — and is fetched locally by apply_choices.py),
+  // otherwise the url of the CC-licensed photo the app showed.
+  var addAsset = qs.get("seedasset") || "";
+  var addSeed = qs.get("seed") || "";
+  var addSeedSrc = qs.get("seedsrc") || "";
   var requests = {};
   try { requests = JSON.parse(localStorage.getItem(RQKEY) || "{}"); } catch (e) {}
   function saveRequests() {
@@ -392,9 +399,12 @@
     });
     // Species with no images: ask for a first-time generation.
     asked.forEach(function (code) {
+      var r = requests[code];
       out[code] = out[code] || {};
       out[code].request = true;
-      if (requests[code].name) out[code].name = requests[code].name;
+      if (r.name) out[code].name = r.name;
+      if (r.seed_asset) out[code].seed_asset = r.seed_asset;   // Macaulay id
+      else if (r.seed) { out[code].seed = r.seed; out[code].seed_src = r.seed_src || ""; }
     });
     var blob = new Blob([JSON.stringify(out, null, 1)], { type: "application/json" });
     var a = document.createElement("a");
@@ -410,9 +420,18 @@
   function renderRequests(data) {
     var box = document.getElementById("requests");
     if (!box) return;
-    if (addCode && !(data.species || {})[addCode] && !requests[addCode]) {
-      requests[addCode] = { name: addName, sci: addSci, ts: new Date().toISOString(),
-        requested: false };
+    if (addCode && !(data.species || {})[addCode]) {
+      // Arriving from "+ add images" is itself the request — the app already
+      // recorded it; fill in anything it could not carry.
+      var cur = requests[addCode] || {};
+      requests[addCode] = {
+        name: cur.name || addName, sci: cur.sci || addSci,
+        ts: cur.ts || new Date().toISOString(),
+        seed_asset: cur.seed_asset || addAsset,
+        seed: cur.seed || addSeed,
+        seed_src: cur.seed_src || addSeedSrc || (addAsset ? "macaulay" : ""),
+        requested: cur.requested !== false,
+      };
       saveRequests();
     }
     var codes = Object.keys(requests);
@@ -434,6 +453,25 @@
         sci.textContent = " " + r.sci;
         label.appendChild(sci);
       }
+      // Which photo the generator will start from. A Macaulay asset is named
+      // and linked, not shown: it is all rights reserved, and it is downloaded
+      // locally by apply_choices.py as a private img2img reference.
+      var seed = document.createElement("span");
+      seed.className = "req-seed";
+      if (r.seed_asset) {
+        seed.appendChild(document.createTextNode("seed: "));
+        var a = document.createElement("a");
+        a.href = "https://macaulaylibrary.org/asset/" + r.seed_asset;
+        a.target = "_blank"; a.rel = "noopener";
+        a.textContent = "Macaulay " + r.seed_asset;
+        seed.appendChild(a);
+      } else if (r.seed) {
+        seed.textContent = "seed: " + (r.seed_src || "photo");
+      } else {
+        seed.textContent = "seed: chosen by the pipeline";
+      }
+      label.appendChild(document.createElement("br"));
+      label.appendChild(seed);
       row.appendChild(label);
 
       var ask = document.createElement("button");

@@ -6,16 +6,10 @@ this file it silently vanishes from the calendar even when the model says the
 bird is present. With it, the app draws a placeholder card carrying the species'
 name and a link into the image review tool, where images can be requested.
 
-Each entry also carries a few **Macaulay Library reference photos** (asset ids +
-CDN urls, never the pixels): the placeholder shows one so the bird is visible at
-all, and the review tool offers them as the seed for generating the species'
-first plate — the same photos the generator would otherwise pick by itself.
-
-  Licensing: Macaulay photos are copyrighted by their photographers. Only the
-  asset id and the public CDN url are stored here; the image is loaded by the
-  viewer's browser straight from Cornell and credited on the card, exactly as
-  the app already links to the Macaulay catalogue. No photo is redistributed
-  from this repo, and none is published as artwork.
+The photograph shown on a placeholder does not come from here: the app looks it
+up live from iNaturalist (CC-licensed, so it may be displayed). Macaulay assets
+are resolved separately by build_ml_assets.py and are used only as a generation
+seed and as a link to the catalogue — never displayed.
 
 The file carries the localized names (the other manifests embed their own), so a
 placeholder is labelled in the chosen language. It shrinks as species gain

@@ -139,7 +139,8 @@ scripts/
   build_field_id_web.py    slim web cut -> docs/field_id.json
   build_missing.py         species with no image at all -> docs/missing.json
   build_aves.py            the model's bird codes -> docs/aves.txt
-  build_photos.py          one photo per species -> docs/photos.json (Photos grid)
+  build_photos.py          openly licensed photo per species -> docs/photos.json
+  build_ml_assets.py       species -> Macaulay asset id (seeds only, never shown)
   apply_field_id_edits.py  fold edits exported from the app back into the dataset
   distill_field_id.py      prompt-shaped field marks -> id_features_sourced.json
 ```

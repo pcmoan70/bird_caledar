@@ -169,3 +169,5 @@ body {
 .req-row.on button:first-of-type {
   background: var(--accent); border-color: var(--accent); color: #fff;
 }
+.req-seed { display: inline-block; margin-top: 2px; font-size: 11px; color: var(--muted); }
+.req-seed a { color: var(--muted); }

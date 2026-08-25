@@ -61,7 +61,7 @@
   var S = {
     labels: [], codeToIdx: {}, nSpecies: 0,
     tax: {}, langs: [], lang: "en",
-    manifest: {}, plates: {}, missing: {}, aves: null, probs: {},  // probs: {weekIndex: Float32Array(nSpecies)}
+    manifest: {}, plates: {}, missing: {}, aves: null, photos: null, probs: {},
     fieldId: null,                         // field_id.json, fetched on first detail view
     lat: DEFAULT.lat, lon: DEFAULT.lon, week: 1, mode: "A", src: "gould",
     aiBW: false,
@@ -322,11 +322,31 @@
   // API allows neither cross-origin reads nor scripted clients, so iNaturalist
   // is used: it is CORS-open and its photos are CC-licensed, i.e. actually
   // displayable, and it is already one of the pipeline's own reference sources.
+  // photos.json, fetched the first time the Photos grid or a photo is needed.
+  var _photosReq = null;
+  function loadPhotos() {
+    if (!_photosReq) {
+      _photosReq = fetch(PHOTOS_URL)
+        .then(function (r) { return r.ok ? r.json() : {}; })
+        .catch(function () { return {}; })
+        .then(function (j) { S.photos = j; return j; });
+    }
+    return _photosReq;
+  }
+
   var REF_CACHE = {};                 // code -> {url, by, license, page, src} | null
   var _refQueue = [], _refBusy = 0, REF_PARALLEL = 3;
 
   function refPhoto(code, cb) {
     if (REF_CACHE[code] !== undefined) { cb(REF_CACHE[code]); return; }
+    var known = (S.photos || {})[code];
+    if (known) {
+      REF_CACHE[code] = { url: known.url, by: "", page: known.page || null,
+        license: "", src: known.credit === "Macaulay Library" ? "macaulay" : "ref",
+        credit: known.credit };
+      cb(REF_CACHE[code]);
+      return;
+    }
     var ml = (S.missing[code] || {}).ml;
     if (ml && ml.length) {
       REF_CACHE[code] = { url: ml[0].url, by: ml[0].by || "", page: ml[0].page,
@@ -380,8 +400,88 @@
       origin: "No image yet — add one in the image review tool", page: null };
   }
 
+  // The Photos source is a gallery, not a scatter of cutouts: same species,
+  // same ranking, laid out as an even grid of photographs.
+  function renderPhotoGrid() {
+    stage.innerHTML = "";
+    stage.classList.add("grid");
+    stage.style.height = "";
+    var rows = [];
+    var seen = {};
+    var add = function (code) {
+      if (seen[code]) return;
+      seen[code] = 1;
+      var mt = metrics(code);
+      if (!mt) return;
+      if (mt.cur <= 0.01) return;
+      if (S.mode === "B" && mt.arrival <= 0) return;
+      rows.push({ code: code, value: S.mode === "A" ? mt.cur : Math.max(0, mt.arrival) });
+    };
+    Object.keys(S.photos || {}).forEach(add);
+    Object.keys(S.manifest).forEach(add);
+    Object.keys(S.plates).forEach(add);
+    Object.keys(S.missing).forEach(add);
+    if (S.aves) S.aves.forEach(add);
+    rows.sort(function (a, b) { return b.value - a.value; });
+
+    document.getElementById("hint").style.display = rows.length ? "none" : "flex";
+    rows.forEach(function (it) {
+      var card = document.createElement("figure");
+      card.className = "gcard";
+      var im = document.createElement("img");
+      im.loading = "lazy"; im.decoding = "async"; im.referrerPolicy = "no-referrer";
+      im.alt = nameFor(it.code).common;
+      card.appendChild(im);
+      var cap = document.createElement("figcaption");
+      var nm = nameFor(it.code);
+      cap.innerHTML = '<span class="gname"></span><span class="gcredit"></span>';
+      cap.querySelector(".gname").textContent = nm.common;
+      card.appendChild(cap);
+      card.title = nm.common + (nm.sci ? " — " + nm.sci : "");
+      card.onclick = function () {
+        openBird({ code: it.code, src: im.src || null, id: "photo/" + it.code,
+          origin: card.dataset.origin || "Reference photograph",
+          page: card.dataset.page || null, stance: "sitting" });
+      };
+      stage.appendChild(card);
+      refPhoto(it.code, function (rec) {
+        if (!rec) { card.classList.add("nophoto"); cap.querySelector(".gcredit").textContent = "no photo"; return; }
+        im.src = rec.url;
+        // A stored thumbnail can go missing (they are pruned as species are
+        // finalised) — fall back to a live lookup instead of a broken tile.
+        im.onerror = function () {
+          im.onerror = null;
+          REF_CACHE[it.code] = undefined;
+          if (S.photos) delete S.photos[it.code];
+          refPhoto(it.code, function (r2) {
+            if (r2 && r2.url) {
+              im.src = r2.url;
+              cap.querySelector(".gcredit").textContent = r2.credit ||
+                (r2.license || "iNaturalist");
+            } else {
+              card.classList.add("nophoto");
+              cap.querySelector(".gcredit").textContent = "no photo";
+            }
+          });
+        };
+        card.dataset.origin = (rec.credit || "Reference photograph") +
+          (rec.by ? " — " + rec.by : "");
+        if (rec.page) card.dataset.page = rec.page;
+        cap.querySelector(".gcredit").textContent = rec.credit ||
+          (rec.src === "macaulay" ? "Macaulay Library" : (rec.license || "iNaturalist"));
+      });
+    });
+    setStatus(rows.length);
+  }
+
   function render() {
     stage.innerHTML = "";
+    stage.classList.remove("grid");
+    if (S.src === "photos") {
+      if (!S.photos) { loadPhotos().then(render); return; }
+      renderPhotoGrid();
+      return;
+    }
     var stance = S.mode === "A" ? "sitting" : "flying";
     var items = [];
     // Union of AI-manifest and plate codes: a plate-covered species may not
@@ -648,6 +748,9 @@
   // scripts/fetch_field_id.py). It is shown in an editable box under the large
   // image; edits stay in this browser and can be exported as field_id_edits.json
   // for scripts/apply_field_id_edits.py to fold back into the dataset.
+  // One photograph per species — the reference photos the generator picked
+  // (mostly Macaulay Library), shown as a grid under the "Photos" source.
+  var PHOTOS_URL = "photos.json";
   var FIELDID_URL = "field_id.json";
   var DESC_KEY = "birdcal.desc.edits";
   var descEdits = {};

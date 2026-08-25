@@ -352,3 +352,19 @@ layout, opens the species (notes intact), the button deep-links to the tool, the
 request survives a reload, the export carries it, and a dry-run apply queues the
 coverage job. Re-run `build_missing.py` after cutout/match_plates/apply_choices
 so the placeholder disappears once images land.
+
+## Photos source + placeholders everywhere (2026-08-25)
+- [x] `build_aves.py` -> `docs/aves.txt`: labels.txt filtered to class aves
+      (10,206 of 12,012). Any bird the model predicts here without an image now
+      gets a placeholder, named from labels.txt — Cape Town 0 -> 152, Singapore
+      186, Stockholm still 0.
+- [x] Placeholders load a real photograph and hand it to the review tool as the
+      generation seed. Macaulay assets when `missing.json` carries them (resolved
+      offline), else a live iNaturalist lookup — Macaulay's search API allows
+      neither cross-origin reads nor scripted clients (it answers with an
+      anti-bot challenge), so it cannot be queried from the browser.
+- [x] New **Photos** source: `build_photos.py` -> `docs/photos.json` (449
+      species; 247 Macaulay CDN links, the rest thumbnails already published
+      under docs/review_imgs/, 64 pruned ones skipped). `#stage.grid` renders an
+      even gallery instead of the scatter, credited per tile, click opens the
+      species. A tile whose stored thumbnail 404s re-looks-up live.

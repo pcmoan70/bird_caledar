@@ -337,6 +337,9 @@ clauses, all from notes).
 - [x] App: those species now appear as a dashed placeholder card (feather glyph,
       name, "+ add images"); the card opens the detail view (field notes still
       shown), the button opens the image tool.
+- [x] The placeholder is keyed on `missing.json` alone — a species that merely
+      lacks an image for the chosen source or stance has pictures elsewhere and
+      is skipped as before. (First cut also let a plate-only species through.)
 - [x] review.html: `?add=<code>&name=&sci=` shows a "Species with no images yet"
       panel with Request images / remove; requests live in localStorage and are
       included in the exported choices.json as `{"request": true}`.

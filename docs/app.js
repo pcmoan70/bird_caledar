@@ -295,10 +295,13 @@
     return ai();   // no plate for this species: fall back to an AI image
   }
 
-  // Stand-in for a species with no image in any source — the bird still belongs
+  // Stand-in for a species with no image in ANY source — the bird still belongs
   // on the page, and the card links into the review tool to ask for images.
+  // Only missing.json qualifies: a species that merely lacks an image for the
+  // current source or stance has pictures elsewhere and is left out as before,
+  // rather than being shown as if it had none.
   function placeholderFor(code) {
-    if (!S.missing[code] && S.manifest[code]) return null;   // has images, just not this stance
+    if (!S.missing[code]) return null;
     return { src: null, id: "missing/" + code, missing: true, flip: false,
       origin: "No image yet — add one in the image review tool", page: null };
   }

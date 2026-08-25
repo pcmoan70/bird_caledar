@@ -6,12 +6,25 @@ this file it silently vanishes from the calendar even when the model says the
 bird is present. With it, the app draws a placeholder card carrying the species'
 name and a link into the image review tool, where images can be requested.
 
+Each entry also carries a few **Macaulay Library reference photos** (asset ids +
+CDN urls, never the pixels): the placeholder shows one so the bird is visible at
+all, and the review tool offers them as the seed for generating the species'
+first plate — the same photos the generator would otherwise pick by itself.
+
+  Licensing: Macaulay photos are copyrighted by their photographers. Only the
+  asset id and the public CDN url are stored here; the image is loaded by the
+  viewer's browser straight from Cornell and credited on the card, exactly as
+  the app already links to the Macaulay catalogue. No photo is redistributed
+  from this repo, and none is published as artwork.
+
 The file carries the localized names (the other manifests embed their own), so a
 placeholder is labelled in the chosen language. It shrinks as species gain
 images — re-run it after cutout.py / match_plates.py / apply_choices.py.
 
-  python build_missing.py
+  python build_missing.py                 # names + Macaulay seeds
+  python build_missing.py --no-photos     # names only (skip the Macaulay search)
 """
+import argparse
 import csv
 import json
 import os
@@ -26,6 +39,8 @@ BIRDS = os.path.join(ROOT, "docs", "birds", "manifest.json")
 PLATES = os.path.join(ROOT, "docs", "plates", "manifest.json")
 TAX = os.path.join(ROOT, "docs", "taxonomy.csv")
 OUT = os.path.join(ROOT, "docs", "missing.json")
+PHOTOS = 3          # Macaulay candidates offered per species
+THUMB = 480         # CDN size for the card (the seed is fetched full-size later)
 
 
 def load_json(path):
@@ -58,7 +73,27 @@ def species_names(codes):
     return out
 
 
+def macaulay_photos(code):
+    """[{id, url, page, by}] — top-rated Macaulay photos for the species, or []
+    when the search is unreachable (it 403s from datacenter IPs)."""
+    try:
+        from sources import macaulay
+    except Exception:                                   # noqa: BLE001
+        return []
+    try:
+        cands = macaulay.search(code, limit=PHOTOS, size=THUMB)
+    except Exception as e:                              # noqa: BLE001
+        print(f"  {code}: macaulay search failed ({e})")
+        return []
+    return [{"id": c.src_id, "url": c.url, "page": c.page_url, "by": c.author}
+            for c in cands[:PHOTOS] if c.src_id]
+
+
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--no-photos", action="store_true",
+                    help="skip the Macaulay lookup (names only)")
+    args = ap.parse_args()
     birds, plates = load_json(BIRDS), load_json(PLATES)
     selected = []
     for ln in open(SELECTED, encoding="utf-8"):
@@ -76,6 +111,11 @@ def main():
         rec = info.get(code, {})
         out[code] = {"sci": rec.get("sci") or sci,
                      "names": rec.get("names") or {"en": com}}
+        if not args.no_photos:
+            photos = macaulay_photos(code)
+            if photos:
+                out[code]["ml"] = photos
+            print(f"  {code:9} {com:28} {len(photos)} Macaulay reference photo(s)")
 
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))

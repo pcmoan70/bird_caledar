@@ -14,10 +14,14 @@
   var TAX_URL = "taxonomy.csv";
   var MANIFEST_URL = "birds/manifest.json";
   var PLATES_URL = "plates/manifest.json";
-  // Species the app has no image for at all (scripts/build_missing.py). They are
-  // drawn as placeholders so a bird that is genuinely present here isn't simply
-  // absent from the calendar, and so images can be requested for it.
+  // Species the app has no image for at all (scripts/build_missing.py) — the
+  // curated set, with Macaulay reference photos attached where the lookup could
+  // reach them. Beyond that set, ANY bird the model predicts here without an
+  // image gets a placeholder too (aves.txt lists the model's bird codes; their
+  // names come from labels.txt), so the calendar shows the gaps wherever you
+  // point it, not just where images already exist.
   var MISSING_URL = "missing.json";
+  var AVES_URL = "aves.txt";
   var DEFAULT = { lat: 59.33, lon: 18.07, name: "Stockholm (default)" }; // fallback
 
   var LANG_NAMES = {
@@ -57,7 +61,7 @@
   var S = {
     labels: [], codeToIdx: {}, nSpecies: 0,
     tax: {}, langs: [], lang: "en",
-    manifest: {}, plates: {}, missing: {}, probs: {},  // probs: {weekIndex: Float32Array(nSpecies)}
+    manifest: {}, plates: {}, missing: {}, aves: null, probs: {},  // probs: {weekIndex: Float32Array(nSpecies)}
     fieldId: null,                         // field_id.json, fetched on first detail view
     lat: DEFAULT.lat, lon: DEFAULT.lon, week: 1, mode: "A", src: "gould",
     aiBW: false,
@@ -197,23 +201,34 @@
   // name, which that page can't look up) and the tool offers to add images.
   function openReview(code) {
     var url = "review.html#" + encodeURIComponent(code);
-    if (S.missing[code]) {
+    if (!S.manifest[code] && !S.plates[code]) {
       var nm = nameFor(code);
+      var ref = REF_CACHE[code];
       url = "review.html?add=" + encodeURIComponent(code) +
         "&name=" + encodeURIComponent(nm.common) +
         "&sci=" + encodeURIComponent(nm.sci || "");
+      if (ref && ref.url) {                 // hand the photo over as the seed
+        url += "&seed=" + encodeURIComponent(ref.url) +
+          "&seedsrc=" + encodeURIComponent(ref.src || "") +
+          "&seedby=" + encodeURIComponent(ref.by || "");
+      }
     }
     window.open(url, "_blank", "noopener");
   }
 
   function nameFor(code) {
     var rec = S.tax[code];
+    // labels.txt names every species the model knows, so a placeholder for a
+    // bird outside the curated set still gets a name (English + scientific).
+    var lab = S.labels[S.codeToIdx[code]];
     var common = (rec && (rec.names[S.lang] || rec.names.en)) ||
-      (S.manifest[code] && S.manifest[code].common) || code;
+      (S.manifest[code] && S.manifest[code].common) ||
+      (lab && lab.common) || code;
     if (CAP_FIRST[S.lang] && common) {
       common = common.charAt(0).toUpperCase() + common.slice(1);
     }
-    var sci = (rec && rec.sci) || (S.manifest[code] && S.manifest[code].sci) || "";
+    var sci = (rec && rec.sci) || (S.manifest[code] && S.manifest[code].sci) ||
+      (lab && lab.sci) || "";
     return { common: common, sci: sci };
   }
 
@@ -295,13 +310,72 @@
     return ai();   // no plate for this species: fall back to an AI image
   }
 
+  // ---- Reference photos for placeholders --------------------------------
+  // A placeholder shows a real photograph of the bird, and that same photo is
+  // handed to the image tool as the generation seed (the pipeline draws its
+  // plates img2img from a reference photo).
+  //
+  // Where the photo comes from: for the curated set, missing.json may carry
+  // Macaulay Library assets resolved offline (scripts/build_missing.py) — those
+  // are hotlinked from Cornell's CDN and credited, never republished. For every
+  // other bird the lookup has to happen in the browser, and Macaulay's search
+  // API allows neither cross-origin reads nor scripted clients, so iNaturalist
+  // is used: it is CORS-open and its photos are CC-licensed, i.e. actually
+  // displayable, and it is already one of the pipeline's own reference sources.
+  var REF_CACHE = {};                 // code -> {url, by, license, page, src} | null
+  var _refQueue = [], _refBusy = 0, REF_PARALLEL = 3;
+
+  function refPhoto(code, cb) {
+    if (REF_CACHE[code] !== undefined) { cb(REF_CACHE[code]); return; }
+    var ml = (S.missing[code] || {}).ml;
+    if (ml && ml.length) {
+      REF_CACHE[code] = { url: ml[0].url, by: ml[0].by || "", page: ml[0].page,
+        license: "Macaulay Library", src: "macaulay", id: ml[0].id };
+      cb(REF_CACHE[code]);
+      return;
+    }
+    _refQueue.push([code, cb]);
+    pumpRefQueue();
+  }
+
+  function pumpRefQueue() {
+    while (_refBusy < REF_PARALLEL && _refQueue.length) {
+      var job = _refQueue.shift();
+      _refBusy++;
+      fetchInat(job[0], job[1]);
+    }
+  }
+
+  function fetchInat(code, cb) {
+    var sci = nameFor(code).sci;
+    var done = function (rec) {
+      REF_CACHE[code] = rec; _refBusy--; cb(rec); pumpRefQueue();
+    };
+    if (!sci) { done(null); return; }
+    fetch("https://api.inaturalist.org/v1/taxa?rank=species&per_page=1&q=" +
+          encodeURIComponent(sci))
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        var t = j && j.results && j.results[0];
+        var ph = t && t.default_photo;
+        if (!ph || !ph.medium_url) { done(null); return; }
+        done({ url: ph.medium_url, by: ph.attribution || "",
+          license: (ph.license_code || "").toUpperCase(), page: t.wikipedia_url ||
+            ("https://www.inaturalist.org/taxa/" + t.id), src: "inat" });
+      })
+      .catch(function () { done(null); });
+  }
+
   // Stand-in for a species with no image in ANY source — the bird still belongs
   // on the page, and the card links into the review tool to ask for images.
   // Only missing.json qualifies: a species that merely lacks an image for the
   // current source or stance has pictures elsewhere and is left out as before,
   // rather than being shown as if it had none.
   function placeholderFor(code) {
-    if (!S.missing[code]) return null;
+    // In "ai" mode a plate-covered species isn't imageless — it just isn't an
+    // AI drawing — so only species with nothing anywhere qualify.
+    if (S.manifest[code] || S.plates[code]) return null;
+    if (!S.missing[code] && !(S.aves && S.avesSet[code])) return null;
     return { src: null, id: "missing/" + code, missing: true, flip: false,
       origin: "No image yet — add one in the image review tool", page: null };
   }
@@ -316,6 +390,9 @@
     Object.keys(S.manifest).forEach(function (c) { codes[c] = 1; });
     if (S.src !== "ai") Object.keys(S.plates).forEach(function (c) { codes[c] = 1; });
     Object.keys(S.missing).forEach(function (c) { codes[c] = 1; });
+    // Every other bird the model knows: it only reaches the page if it clears
+    // the occurrence filter below, and then only as a placeholder.
+    if (S.aves) S.aves.forEach(function (c) { codes[c] = 1; });
     Object.keys(codes).forEach(function (code) {
       var pick = chooseImage(code, stance) || placeholderFor(code);
       if (!pick) return;
@@ -368,12 +445,32 @@
         '<button type="button" class="ph-add">+ add images</button>';
       ph.querySelector(".ph-name").textContent = nameFor(it.code).common;
       // The card opens the species like any other bird; only this button leaves
-      // for the image tool.
+      // for the image tool, carrying the photo as the generation seed.
       ph.querySelector(".ph-add").onclick = function (e) {
         e.stopPropagation();
         openReview(it.code);
       };
       el.appendChild(ph);
+      // Fill the card with a real photograph of the bird once it arrives.
+      refPhoto(it.code, function (rec) {
+        if (!rec || !el.isConnected) return;
+        it.ref = rec;
+        var pic = document.createElement("img");
+        pic.className = "ph-photo";
+        pic.loading = "lazy"; pic.decoding = "async";
+        pic.referrerPolicy = "no-referrer";
+        pic.alt = nameFor(it.code).common;
+        pic.src = rec.url;
+        pic.onload = function () { ph.classList.add("has-photo"); };
+        pic.onerror = function () { pic.remove(); };
+        ph.insertBefore(pic, ph.firstChild);
+        var cr = document.createElement("span");
+        cr.className = "ph-credit";
+        cr.textContent = rec.src === "macaulay" ? "Macaulay Library"
+          : (rec.license ? rec.license.toUpperCase() : "iNaturalist");
+        cr.title = "Reference photo: " + (rec.by || rec.src);
+        ph.appendChild(cr);
+      });
       el.addEventListener("mousemove", function (ev) { showTip(ev, it); });
       el.addEventListener("mouseleave", function () { tip.classList.remove("show"); });
       el.addEventListener("click", function () {
@@ -924,12 +1021,18 @@
           .catch(function () { return {}; }),
         fetch(MISSING_URL).then(function (r) { return r.ok ? r.json() : {}; })
           .catch(function () { return {}; }),
+        fetch(AVES_URL).then(function (r) { return r.ok ? r.text() : ""; })
+          .catch(function () { return ""; }),
         initWorker(),
       ]);
       loadLabels(texts[0]);
       S.manifest = texts[1];
       S.plates = texts[2] || {};
       S.missing = texts[3] || {};
+      S.aves = (texts[4] || "").split("\n")
+        .map(function (c) { return c.trim(); }).filter(Boolean);
+      S.avesSet = {};
+      S.aves.forEach(function (c) { S.avesSet[c] = 1; });
       // Names come from the manifest when present; otherwise fall back to the
       // (large) taxonomy.csv for backward compatibility.
       if (!useManifestNames()) {

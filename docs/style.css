@@ -102,6 +102,33 @@ select { border: 1px solid #cfc8b6; border-radius: 8px; padding: 5px 8px; color:
 .bird-sci { font-style: italic; color: var(--muted); margin-top: 2px; }
 /* Editable identification text under the large image. Edits live in this
    browser (localStorage) and can be exported for scripts/apply_field_id_edits.py */
+.bird-missing {
+  width: min(420px, 80vw); height: 34vh; display: flex; gap: 10px;
+  flex-direction: column; align-items: center; justify-content: center;
+  border: 1px dashed #bdb49f; border-radius: 14px; color: var(--muted);
+  background: rgba(0,0,0,0.02); font-size: 14px;
+}
+.bird-missing .ph-glyph { font-size: 34px; opacity: 0.5; }
+.bird-extra .add-images { font-weight: 600; }
+
+/* Species with no image yet: a card in the bird's place, linking to the tool
+   where images can be requested. */
+.bird.missing .ph {
+  width: 100%; height: 100%; box-sizing: border-box; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; padding: 8px; text-align: center;
+  background: rgba(0,0,0,0.02); color: var(--muted);
+  border: 1px dashed #bdb49f; border-radius: 12px;
+  font: inherit; line-height: 1.2;
+}
+.bird.missing .ph:hover { background: rgba(0,0,0,0.05); border-color: var(--ink); color: var(--ink); }
+.ph-glyph { font-size: clamp(18px, 22%, 40px); opacity: 0.55; }
+.ph-name {
+  font-family: "Playfair Display", "Iowan Old Style", Georgia, serif;
+  font-size: clamp(11px, 11%, 17px);
+}
+.ph-add { font-size: clamp(9px, 8%, 12px); letter-spacing: 0.04em; opacity: 0.85; }
+
 .bird-desc-wrap { margin-top: 14px; text-align: left; width: min(760px, 100%); }
 .bird-desc-head {
   display: flex; align-items: baseline; justify-content: space-between; gap: 10px;

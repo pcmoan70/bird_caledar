@@ -14,6 +14,10 @@
   var TAX_URL = "taxonomy.csv";
   var MANIFEST_URL = "birds/manifest.json";
   var PLATES_URL = "plates/manifest.json";
+  // Species the app has no image for at all (scripts/build_missing.py). They are
+  // drawn as placeholders so a bird that is genuinely present here isn't simply
+  // absent from the calendar, and so images can be requested for it.
+  var MISSING_URL = "missing.json";
   var DEFAULT = { lat: 59.33, lon: 18.07, name: "Stockholm (default)" }; // fallback
 
   var LANG_NAMES = {
@@ -53,7 +57,7 @@
   var S = {
     labels: [], codeToIdx: {}, nSpecies: 0,
     tax: {}, langs: [], lang: "en",
-    manifest: {}, plates: {}, probs: {},   // probs: {weekIndex: Float32Array(nSpecies)}
+    manifest: {}, plates: {}, missing: {}, probs: {},  // probs: {weekIndex: Float32Array(nSpecies)}
     fieldId: null,                         // field_id.json, fetched on first detail view
     lat: DEFAULT.lat, lon: DEFAULT.lon, week: 1, mode: "A", src: "gould",
     aiBW: false,
@@ -172,16 +176,34 @@
   // the chosen locale for every bird.
   function mergePlateNames() {
     var langset = {};
-    for (var code in S.plates) {
-      var e = S.plates[code];
-      if (!S.tax[code] && (e.names || e.sci)) {
-        S.tax[code] = { sci: e.sci || "", names: e.names || {} };
+    // Species with no image at all carry their own names too, so a placeholder
+    // is labelled in the chosen language.
+    [S.plates, S.missing].forEach(function (src) {
+      for (var code in src) {
+        var e = src[code];
+        if (!S.tax[code] && (e.names || e.sci)) {
+          S.tax[code] = { sci: e.sci || "", names: e.names || {} };
+        }
+        for (var lg in (e.names || {})) langset[lg] = 1;
       }
-      for (var lg in (e.names || {})) langset[lg] = 1;
-    }
+    });
     for (var l2 in langset) {
       if (S.langs.indexOf(l2) < 0) S.langs.push(l2);
     }
+  }
+
+  // Open the image review tool for a species. A species that has no images at
+  // all isn't in the review manifest, so it is passed as a request (with its
+  // name, which that page can't look up) and the tool offers to add images.
+  function openReview(code) {
+    var url = "review.html#" + encodeURIComponent(code);
+    if (S.missing[code]) {
+      var nm = nameFor(code);
+      url = "review.html?add=" + encodeURIComponent(code) +
+        "&name=" + encodeURIComponent(nm.common) +
+        "&sci=" + encodeURIComponent(nm.sci || "");
+    }
+    window.open(url, "_blank", "noopener");
   }
 
   function nameFor(code) {
@@ -273,6 +295,14 @@
     return ai();   // no plate for this species: fall back to an AI image
   }
 
+  // Stand-in for a species with no image in any source — the bird still belongs
+  // on the page, and the card links into the review tool to ask for images.
+  function placeholderFor(code) {
+    if (!S.missing[code] && S.manifest[code]) return null;   // has images, just not this stance
+    return { src: null, id: "missing/" + code, missing: true, flip: false,
+      origin: "No image yet — add one in the image review tool", page: null };
+  }
+
   function render() {
     stage.innerHTML = "";
     var stance = S.mode === "A" ? "sitting" : "flying";
@@ -282,8 +312,9 @@
     var codes = {};
     Object.keys(S.manifest).forEach(function (c) { codes[c] = 1; });
     if (S.src !== "ai") Object.keys(S.plates).forEach(function (c) { codes[c] = 1; });
+    Object.keys(S.missing).forEach(function (c) { codes[c] = 1; });
     Object.keys(codes).forEach(function (code) {
-      var pick = chooseImage(code, stance);
+      var pick = chooseImage(code, stance) || placeholderFor(code);
       if (!pick) return;
       var mt = metrics(code);
       if (mt && mt.cur <= 0.01) return;   // only species with >1% occurrence here
@@ -292,7 +323,7 @@
       if (value <= 0) return;
       items.push({ code: code, img: pick.id, src: pick.src, flip: pick.flip,
         face: pick.face, origin: pick.origin, page: pick.page, ai: pick.ai,
-        stance: stance, value: value });
+        missing: pick.missing, stance: stance, value: value });
     });
     document.getElementById("hint").style.display = items.length ? "none" : "flex";
     if (!items.length) {
@@ -323,6 +354,31 @@
       (it.ai ? " ai" : "");
     el.style.left = it.x + "px"; el.style.top = it.y + "px";
     el.style.width = it.size + "px"; el.style.height = it.size + "px";
+
+    if (it.missing) {                      // no image anywhere: draw a card
+      el.className += " missing";
+      var ph = document.createElement("button");
+      ph.type = "button";
+      ph.className = "ph";
+      ph.title = "No image yet for " + nameFor(it.code).common +
+                 " — click to add one";
+      ph.innerHTML = '<span class="ph-glyph" aria-hidden="true">🪶</span>' +
+        '<span class="ph-name"></span><span class="ph-add">+ add images</span>';
+      ph.querySelector(".ph-name").textContent = nameFor(it.code).common;
+      ph.onclick = function (e) {
+        e.stopPropagation();
+        openReview(it.code);
+      };
+      el.appendChild(ph);
+      el.addEventListener("mousemove", function (ev) { showTip(ev, it); });
+      el.addEventListener("mouseleave", function () { tip.classList.remove("show"); });
+      el.addEventListener("click", function () {
+        tip.classList.remove("show"); openBird(it);
+      });
+      stage.appendChild(el);
+      return;
+    }
+
     var im = document.createElement("img");
     im.loading = "lazy"; im.decoding = "async";
     im.src = it.src; im.alt = nameFor(it.code).common;
@@ -346,7 +402,7 @@
     if (it.ai) {
       fb.querySelector(".rev").onclick = function (e) {
         e.stopPropagation();
-        window.open("review.html#" + encodeURIComponent(it.code), "_blank", "noopener");
+        openReview(it.code);
       };
     }
     el.appendChild(fb);
@@ -639,7 +695,12 @@
     var nm = nameFor(BIRD.code);
     var v = BIRD.variants[BIRD.idx];
     var img = document.getElementById("bird-img");
-    img.src = v.src; img.alt = nm.common;
+    // A species with no image at all shows the placeholder panel instead.
+    var noImage = !v.src;
+    img.hidden = noImage;
+    document.getElementById("bird-missing").hidden = !noImage;
+    if (noImage) { img.removeAttribute("src"); } else { img.src = v.src; }
+    img.alt = nm.common;
     img.style.filter = (v.ai && S.aiBW)
       ? "grayscale(1) sepia(.22) contrast(.62) brightness(1.12)" : "";
     img.style.cursor = BIRD.variants.length > 1 ? "pointer" : "default";
@@ -660,6 +721,15 @@
 
     var extra = document.getElementById("bird-extra");
     extra.textContent = "";
+    if (noImage) {
+      var add = document.createElement("a");
+      add.href = "#";
+      add.className = "add-images";
+      add.textContent = "Add images for this species →";
+      add.onclick = function (e) { e.preventDefault(); openReview(BIRD.code); };
+      extra.appendChild(add);
+      extra.appendChild(document.createElement("br"));
+    }
     if (BIRD.variants.length > 1) {
       var sources = BIRD.variants.map(function (x) { return x.label; }).join(" · ");
       extra.appendChild(document.createTextNode("Tap the image to switch source (" + sources + ")"));
@@ -848,11 +918,14 @@
         fetch(MANIFEST_URL).then(function (r) { return r.json(); }),
         fetch(PLATES_URL).then(function (r) { return r.ok ? r.json() : {}; })
           .catch(function () { return {}; }),
+        fetch(MISSING_URL).then(function (r) { return r.ok ? r.json() : {}; })
+          .catch(function () { return {}; }),
         initWorker(),
       ]);
       loadLabels(texts[0]);
       S.manifest = texts[1];
       S.plates = texts[2] || {};
+      S.missing = texts[3] || {};
       // Names come from the manifest when present; otherwise fall back to the
       // (large) taxonomy.csv for backward compatibility.
       if (!useManifestNames()) {

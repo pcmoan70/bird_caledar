@@ -15,6 +15,18 @@
   // so the user lands on that species' card.
   var hashCode = "";
   try { hashCode = decodeURIComponent((location.hash || "").replace(/^#/, "")); } catch (e) {}
+  // The app also links species that have NO images at all (they are absent from
+  // the review manifest) as ?add=<code>&name=…&sci=… — those get a request card.
+  var RQKEY = "birdReviewRequests";   // {code: {name, sci, ts}}
+  var qs = new URLSearchParams(location.search || "");
+  var addCode = qs.get("add") || "";
+  var addName = qs.get("name") || addCode;
+  var addSci = qs.get("sci") || "";
+  var requests = {};
+  try { requests = JSON.parse(localStorage.getItem(RQKEY) || "{}"); } catch (e) {}
+  function saveRequests() {
+    localStorage.setItem(RQKEY, JSON.stringify(requests));
+  }
   var choices = {}, meta = {}, gens = {};
   try { choices = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
   try { meta = JSON.parse(localStorage.getItem(MKEY) || "{}"); } catch (e) {}
@@ -360,8 +372,10 @@
     // Only export species the user has actually given feedback on, so a partial
     // download (and the apply that follows) doesn't mark the whole list reviewed.
     var codes = Object.keys(data.species).filter(touched);
-    if (!codes.length) {
-      alert("No feedback to export yet — set a verdict, pick an image, or flag the photo first.");
+    var asked = Object.keys(requests).filter(function (c) { return requests[c].requested; });
+    if (!codes.length && !asked.length) {
+      alert("No feedback to export yet — set a verdict, pick an image, flag the photo, "
+            + "or request images for a species that has none.");
       return;
     }
     codes.forEach(function (code) {
@@ -376,6 +390,12 @@
       if (idEdited) out[code].id = mm.idEdit.trim();
       if (mm.note) out[code].note = mm.note;
     });
+    // Species with no images: ask for a first-time generation.
+    asked.forEach(function (code) {
+      out[code] = out[code] || {};
+      out[code].request = true;
+      if (requests[code].name) out[code].name = requests[code].name;
+    });
     var blob = new Blob([JSON.stringify(out, null, 1)], { type: "application/json" });
     var a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -383,14 +403,75 @@
     a.click();
   };
 
+  // ---- Species with no images at all -----------------------------------------
+  // They have nothing to review, so the page offers to request images instead;
+  // requests ride along in the exported choices.json and scripts/apply_choices.py
+  // queues a first-time ("coverage") generation for each.
+  function renderRequests(data) {
+    var box = document.getElementById("requests");
+    if (!box) return;
+    if (addCode && !(data.species || {})[addCode] && !requests[addCode]) {
+      requests[addCode] = { name: addName, sci: addSci, ts: new Date().toISOString(),
+        requested: false };
+      saveRequests();
+    }
+    var codes = Object.keys(requests);
+    box.hidden = !codes.length;
+    box.innerHTML = "";
+    if (!codes.length) return;
+    var h = document.createElement("h2");
+    h.textContent = "Species with no images yet";
+    box.appendChild(h);
+    codes.forEach(function (code) {
+      var r = requests[code];
+      var row = document.createElement("div");
+      row.className = "req-row" + (r.requested ? " on" : "");
+      var label = document.createElement("span");
+      label.className = "req-name";
+      label.textContent = r.name || code;
+      if (r.sci) {
+        var sci = document.createElement("em");
+        sci.textContent = " " + r.sci;
+        label.appendChild(sci);
+      }
+      row.appendChild(label);
+
+      var ask = document.createElement("button");
+      ask.type = "button";
+      ask.textContent = r.requested ? "✓ images requested" : "Request images";
+      ask.title = "Queue a first-time generation for this species (exported with your feedback)";
+      ask.onclick = function () {
+        r.requested = !r.requested; saveRequests(); renderRequests(data);
+      };
+      row.appendChild(ask);
+
+      var drop = document.createElement("button");
+      drop.type = "button"; drop.className = "ghost";
+      drop.textContent = "✕"; drop.title = "Remove from the list";
+      drop.onclick = function () {
+        delete requests[code]; saveRequests(); renderRequests(data);
+      };
+      row.appendChild(drop);
+      box.appendChild(row);
+    });
+    var note = document.createElement("p");
+    note.className = "muted";
+    note.textContent = "Requested species are included when you export feedback; "
+      + "applying it queues a first-time generation for each.";
+    box.appendChild(note);
+  }
+
   fetch("review/manifest.json?_=" + Date.now())
     .then(function (r) { return r.json(); })
     .then(function (d) {
       window.__review = d; render(d); updateProgress();
+      renderRequests(d);
       if (hashCode && d.species && d.species[hashCode]) {
         requestAnimationFrame(function () { focusSpecies(hashCode); });
       } else {
-        if (hashCode) alert("That species hasn't been generated for review yet.");
+        if (hashCode && !addCode) {
+          alert("That species hasn't been generated for review yet.");
+        }
         requestAnimationFrame(restoreScroll);
       }
     })

@@ -146,3 +146,26 @@ body {
 }
 .card .idtext:focus { outline: none; border-color: var(--accent); }
 .card .idtext.edited { border-color: var(--accent); background: #fff; }
+
+/* Species with no images at all — they can't be reviewed, only requested. */
+.requests {
+  margin: 16px 20px; padding: 12px 16px; max-width: 900px;
+  background: #fff; border: 1px dashed #c9c1ad; border-radius: 12px;
+}
+.requests h2 { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
+.requests .muted { margin: 8px 0 0; font-size: 12px; }
+.req-row {
+  display: flex; align-items: center; gap: 10px; padding: 6px 0;
+  border-top: 1px solid #efe9dc;
+}
+.req-row:first-of-type { border-top: 0; }
+.req-name { flex: 1; font-size: 14px; }
+.req-name em { color: var(--muted); }
+.req-row button {
+  font: inherit; font-size: 13px; cursor: pointer; color: var(--muted);
+  background: #fff; border: 1px solid #d9d2c0; border-radius: 8px; padding: 6px 12px;
+}
+.req-row button:hover { background: #f3efe6; }
+.req-row.on button:first-of-type {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+}

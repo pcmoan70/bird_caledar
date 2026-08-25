@@ -92,6 +92,7 @@ select { border: 1px solid #cfc8b6; border-radius: 8px; padding: 5px 8px; color:
   display: flex; flex-direction: column; align-items: center;
 }
 #bird-img { max-width: 100%; max-height: 68vh; height: auto; display: block; }
+#bird-img[hidden] { display: none; }   /* else `display: block` wins over [hidden] */
 /* with field notes below it, the plate yields height so both fit */
 .bird-card.has-notes #bird-img { max-height: 42vh; }
 .bird-info { text-align: center; margin-top: 14px; }
@@ -100,7 +101,10 @@ select { border: 1px solid #cfc8b6; border-radius: 8px; padding: 5px 8px; color:
   font-size: 26px; font-weight: 600;
 }
 .bird-sci { font-style: italic; color: var(--muted); margin-top: 2px; }
-/* Detail view of a species with no image at all */
+/* Detail view of a species with no image at all. The [hidden] rule must come
+   with it: `display: flex` below would otherwise beat the browser default and
+   the panel would show under every bird. */
+.bird-missing[hidden] { display: none; }
 .bird-missing {
   width: min(420px, 80vw); height: 34vh; display: flex; gap: 10px;
   flex-direction: column; align-items: center; justify-content: center;

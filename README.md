@@ -141,6 +141,7 @@ scripts/
   build_aves.py            the model's bird codes -> docs/aves.txt
   build_photos.py          openly licensed photo per species -> docs/photos.json
   build_ml_assets.py       species -> Macaulay asset id (seeds only, never shown)
+  export_descriptions_en.py  English-only notes -> docs/descriptions_en.{json,md}
   apply_field_id_edits.py  fold edits exported from the app back into the dataset
   distill_field_id.py      prompt-shaped field marks -> id_features_sourced.json
 ```
